@@ -434,6 +434,60 @@ function planDefense(traj, lag, myX, isLeft, reachMin, reachMax, oppX) {
 }
 
 /**
+ * 수비 대기의 목표 위치와 진동 허용 폭을 함께 낸다.
+ *
+ * planDefense는 코트 전역 스캔 + 위협 7종 시뮬레이션이라 이 봇에서 가장
+ * 무거운 계산이다. 그래서 **결과를 실제로 쓰는 곳에서만** 부른다
+ * (지상 수비 대기, 그리고 DEF_AIR가 켜졌을 때의 공중 복귀).
+ * 미리 계산해 두면 "공중 + 공은 상대 쪽" 조합에서 통째로 버려진다.
+ *
+ * @return {{x:number, amp:number}} x=목표 위치, amp=진동 허용 폭(0이면 정지 수비)
+ */
+function planDefenseTarget(
+  traj,
+  lag,
+  myX,
+  isLeft,
+  reachMin,
+  reachMax,
+  oppX,
+  standbyX,
+  oppState
+) {
+  // 예측이 없거나 실패하면 코트 중앙 대기 + 전 진폭 허용(위협이 아직 멀다)
+  var out = { x: standbyX, amp: OSC_AMP };
+  if (DEF_PREDICT !== 1) {
+    return out;
+  }
+  var plan = planDefense(traj, lag, myX, isLeft, reachMin, reachMax, oppX);
+  if (plan === null) {
+    return out;
+  }
+
+  // 예측 수비의 신뢰도는 상대의 상태에 달려 있다. 점프(state 1·2)는 공격
+  // 확정 신호라 접촉점·위협 집합이 거의 그대로 실현되므로 예측을 전량
+  // 반영한다. 지상의 상대는 언제 어디서 칠지 자유도가 커서 예측을
+  // DEF_GROUND_TRUST 비율만 반영한다.
+  // (현재 DEF_GROUND_TRUST=1이라 이 분기는 실질적으로 항상 전량 반영이다.
+  //  lag2 이상 환경에서 되돌릴 노브로 남겨둔 것 — 죽은 코드가 아니다.)
+  var trust = oppState === 1 || oppState === 2 ? 1 : DEF_GROUND_TRUST;
+  out.x = standbyX + trust * (plan.x - standbyX);
+
+  // 진동 폭은 게이트 두 개를 직렬로 통과한다.
+  //  ① 시간 게이트 — 상대 접촉이 충분히 멀 때만 흔든다. 가까우면 정확 수렴.
+  //  ② 슬랙 게이트 — 통과했으면 maximin 최악 마진의 여유(-worst)만큼만.
+  // 슬랙 단독은 실패했다: 슬랙은 "낙하점까지 걸어가 받는다" 모델의 여유인데
+  // 실제 수비는 점프 요격이라 그 여유가 허수였다. 상시 진동은 칼끝 수비를
+  // 전부 실점으로 바꿨다 (vs v5 0% 실측). 시간 게이트가 앞에 설 때만 무해하다.
+  if (plan.contactIdx > JINK_SAFE_FRAMES) {
+    out.amp = clamp(-plan.worst - 6, 0, OSC_AMP);
+  } else {
+    out.amp = 0;
+  }
+  return out;
+}
+
+/**
  * 세팅 계획: 몸통으로 받아 내 코트에 띄운 뒤, 그 공을 스매시한다.
  *
  * 서는 위치(offset)를 바꿔가며 2수 앞을 시뮬레이션하고, 이어지는 스매시가
@@ -616,34 +670,6 @@ function think(s) {
   var landsOnMySide = landX > courtMin && landX < courtMax;
   var canStillSet = possessionTouches < MAX_SET_TOUCHES;
 
-  // 공이 상대 쪽으로 갈 때의 수비 목표 (예측 수비 실패 시 코트 중앙)
-  var defenseX = standbyX;
-  // 진동 예산: maximin 최악 마진의 여유(-worst)가 클수록 커버리지를 잃지 않고
-  // 흔들 수 있다. 계획이 없으면(위협이 아직 멀다) 전 진폭을 허용한다.
-  var jinkAmp = OSC_AMP;
-  // 예측 수비의 신뢰도는 상대의 상태에 달려 있다. 점프(state 1·2)는 공격
-  // 확정 신호라 접촉점·위협 집합이 거의 그대로 실현되므로 예측을 전량
-  // 반영한다. 지상의 상대는 언제 어디서 칠지 자유도가 커서 예측을
-  // DEF_GROUND_TRUST 비율만 반영한다.
-  if (DEF_PREDICT === 1 && !landsOnMySide) {
-    var plan = planDefense(traj, lag, myX, isLeft, reachMin, reachMax, oppX);
-    if (plan !== null) {
-      var trust =
-        s.opp.state === 1 || s.opp.state === 2 ? 1 : DEF_GROUND_TRUST;
-      defenseX = standbyX + trust * (plan.x - standbyX);
-      // 시간 게이트: 진동은 상대 접촉이 충분히 먼 동안만. 접촉이 다가오면
-      // 정확 수렴한다. 슬랙 게이트만으로는 부족했다 — 슬랙은 "낙하점 걷기"
-      // 모델의 여유인데 실제 수비는 점프 요격이라 그 여유가 허수였고,
-      // 상시 진동은 칼끝 수비를 전부 실점으로 바꿨다 (vs v5 0% 실측).
-      if (plan.contactIdx > JINK_SAFE_FRAMES) {
-        var slack = -plan.worst - 6;
-        jinkAmp = slack < 0 ? 0 : slack > OSC_AMP ? OSC_AMP : slack;
-      } else {
-        jinkAmp = 0;
-      }
-    }
-  }
-
   // ── 공중: 공을 따라가며 접촉 시점을 잡아 처리 ────────────────
   if (myState === 1 || myState === 2) {
     var n = jumpPhase(s.self.y, prevSelfY);
@@ -688,7 +714,18 @@ function think(s) {
     // 상대 코트로 떠나가는 공을 쫓지 않는 처리(DEF_AIR)는 측정 결과
     // 예측 수비와 조합 시 손해라 기본 OFF다.
     if (DEF_AIR === 1 && contact < 0 && !landsOnMySide) {
-      return { x: walkTo(defenseX, myX), y: 0, hit: 0 };
+      var defAir = planDefenseTarget(
+        traj,
+        lag,
+        myX,
+        isLeft,
+        reachMin,
+        reachMax,
+        oppX,
+        standbyX,
+        s.opp.state
+      );
+      return { x: walkTo(defAir.x, myX), y: 0, hit: 0 };
     }
 
     if (contact >= 0 && contact <= lag + HIT_LEAD_FRAMES) {
@@ -748,8 +785,19 @@ function think(s) {
 
   // ── 땅에 있고 공이 상대 쪽으로 갈 때: 예측 수비 위치 주변 진동 ──
   if (!landsOnMySide) {
+    var def = planDefenseTarget(
+      traj,
+      lag,
+      myX,
+      isLeft,
+      reachMin,
+      reachMax,
+      oppX,
+      standbyX,
+      s.opp.state
+    );
     return {
-      x: jinkAround(defenseX, myX, reachMin, reachMax, jinkAmp),
+      x: jinkAround(def.x, myX, reachMin, reachMax, def.amp),
       y: 0,
       hit: 0,
     };
