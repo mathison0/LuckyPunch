@@ -204,6 +204,7 @@ const OPPS = [
   'LuckyPunch_v06.js',
   'LuckyPunch_v07.js',
   'LuckyPunch_v09.js',
+  'LuckyPunch_v10.js',
 ].filter(
   (f) =>
     f !== ME_FILE &&
