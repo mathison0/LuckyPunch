@@ -10,7 +10,12 @@ node bench.mjs LuckyPunch_v03.js 10                     # 종합: 상대·양진
 node run.mjs  LuckyPunch_v03.js ai 20 1                 # 단일 매치업
 node tune.mjs LuckyPunch_v03.js CONTACT_Y_TOL 14,20,26  # 파라미터 스윕 (미러 자기대전)
 node debug.mjs LuckyPunch_v03.js 1 right                # 한 랠리 프레임 단위 추적
+node rally-stats.mjs LuckyPunch_v12.js - LuckyPunch_v04.js,PikaPlanner_tuned_v1.js
+                                                        # lag1·지터·양 진영 48세트 상세
 ```
+
+`rally-stats.mjs`의 세 번째 인자는 튜닝 override이며, 사용하지 않으면 `-`를
+쓴다. 네 번째 인자에는 임의의 상대 파일을 쉼표로 구분해 지정할 수 있다.
 
 ## 하네스가 재현하는 것
 

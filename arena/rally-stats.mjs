@@ -10,7 +10,7 @@ import { PikaPhysics, PikaUserInput } from './physics.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const D = path.join(HERE, '..', 'src', 'code-here') + '/';
-const ME_OVERRIDES = process.argv[3]
+const ME_OVERRIDES = process.argv[3] && process.argv[3] !== '-'
   ? Object.fromEntries(
       process.argv[3].split(',').map((pair) => {
         const [name, value] = pair.split('=');
@@ -195,7 +195,7 @@ function runSet(meFile, oppFile, seed, jit, meLeft, agg) {
 }
 
 const ME_FILE = process.argv[2] || 'LuckyPunch_v07.js';
-const OPPS = [
+const DEFAULT_OPPS = [
   'LuckyPunch_v01.js',
   'LuckyPunch_v02.js',
   'LuckyPunch_v03.js',
@@ -205,11 +205,11 @@ const OPPS = [
   'LuckyPunch_v07.js',
   'LuckyPunch_v09.js',
   'LuckyPunch_v10.js',
-].filter(
-  (f) =>
-    f !== ME_FILE &&
-    (!process.argv[4] || process.argv[4].split(',').includes(f))
-);
+];
+const OPPS = (process.argv[4]
+  ? process.argv[4].split(',').map((f) => f.trim()).filter(Boolean)
+  : DEFAULT_OPPS
+).filter((f) => f !== ME_FILE);
 const pct = (w, n) =>
   n ? ((w / n) * 100).toFixed(1).padStart(5) + '%' : '    —';
 console.log(
