@@ -10,14 +10,14 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const D = path.join(HERE, '..', 'src', 'code-here') + '/';
 const OPPONENTS = [
   { name: '기본AI', make: () => ({ kind: 'ai' }) },
-  { name: 'v1', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v1.js', null) }) },
-  { name: 'v2', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v2.js', null) }) },
-  { name: 'v3', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v3.js', null) }) },
+  { name: 'v1', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v01.js', null) }) },
+  { name: 'v2', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v02.js', null) }) },
+  { name: 'v3', make: () => ({ kind: 'bot', decide: loadBot(D + 'LuckyPunch_v03.js', null) }) },
 ];
 const OV = process.argv[4] ? Object.fromEntries(process.argv[4].split(',').map(p => { const [k,v]=p.split('='); return [k, Number(v)]; })) : null;
 const LAGS = [1, 2, 3];
 
-const bots = (process.argv[2] || 'LuckyPunch_v3.js').split(',');
+const bots = (process.argv[2] || 'LuckyPunch_v03.js').split(',');
 const sets = Number(process.argv[3] || 10);
 
 for (const botFile of bots) {

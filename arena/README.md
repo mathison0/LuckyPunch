@@ -6,10 +6,10 @@
 ```bash
 cd arena && bash sync-engine.sh                        # 엔진 사본 갱신 (최초 1회 / 엔진 변경 시)
 
-node bench.mjs LuckyPunch_v3.js 10                     # 종합: 상대·양진영·지연 전 조합
-node run.mjs  LuckyPunch_v3.js ai 20 1                 # 단일 매치업
-node tune.mjs LuckyPunch_v3.js CONTACT_Y_TOL 14,20,26  # 파라미터 스윕 (미러 자기대전)
-node debug.mjs LuckyPunch_v3.js 1 right                # 한 랠리 프레임 단위 추적
+node bench.mjs LuckyPunch_v03.js 10                     # 종합: 상대·양진영·지연 전 조합
+node run.mjs  LuckyPunch_v03.js ai 20 1                 # 단일 매치업
+node tune.mjs LuckyPunch_v03.js CONTACT_Y_TOL 14,20,26  # 파라미터 스윕 (미러 자기대전)
+node debug.mjs LuckyPunch_v03.js 1 right                # 한 랠리 프레임 단위 추적
 ```
 
 ## 하네스가 재현하는 것

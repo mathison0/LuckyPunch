@@ -6,7 +6,7 @@
 //   shotWall   : 대상 봇의 파워히트 직후 궤적에 벽 반사가 포함된 랠리 — G2
 //   anyWall    : 어느 쪽이든 실제 벽 반사가 일어난 랠리
 //
-// 사용법: node wall-audit.mjs [봇파일=LuckyPunch_v7.js] [시드수=12]
+// 사용법: node wall-audit.mjs [봇파일=LuckyPunch_v07.js] [시드수=12]
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBot, makeRng } from './arena.mjs';
@@ -129,11 +129,11 @@ function runSet(meFile, oppSpec, seed, jit, meLeft, agg) {
   agg.sets++;
 }
 
-const meFile = process.argv[2] || 'LuckyPunch_v7.js';
+const meFile = process.argv[2] || 'LuckyPunch_v07.js';
 const seeds = Number(process.argv[3] || 12);
 const agg = { sets: 0, setWins: 0, rallies: 0, wins: 0, cornerR: 0, cornerW: 0, normalR: 0, normalW: 0, shotWallR: 0, shotWallW: 0, anyWallR: 0, anyWallW: 0 };
 
-for (const opp of ['ai', 'LuckyPunch_v3.js', 'LuckyPunch_v5.js']) {
+for (const opp of ['ai', 'LuckyPunch_v03.js', 'LuckyPunch_v05.js']) {
   for (let i = 0; i < seeds; i++) {
     for (const jit of [0, 8]) {
       for (const L of [true, false]) {

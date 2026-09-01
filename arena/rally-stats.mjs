@@ -194,16 +194,16 @@ function runSet(meFile, oppFile, seed, jit, meLeft, agg) {
   agg.sets++;
 }
 
-const ME_FILE = process.argv[2] || 'LuckyPunch_v7.js';
+const ME_FILE = process.argv[2] || 'LuckyPunch_v07.js';
 const OPPS = [
-  'LuckyPunch_v1.js',
-  'LuckyPunch_v2.js',
-  'LuckyPunch_v3.js',
-  'LuckyPunch_v4.js',
-  'LuckyPunch_v5.js',
-  'LuckyPunch_v6.js',
-  'LuckyPunch_v7.js',
-  'LuckyPunch_v9.js',
+  'LuckyPunch_v01.js',
+  'LuckyPunch_v02.js',
+  'LuckyPunch_v03.js',
+  'LuckyPunch_v04.js',
+  'LuckyPunch_v05.js',
+  'LuckyPunch_v06.js',
+  'LuckyPunch_v07.js',
+  'LuckyPunch_v09.js',
 ].filter(
   (f) =>
     f !== ME_FILE &&
