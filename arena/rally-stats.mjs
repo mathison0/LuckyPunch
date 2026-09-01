@@ -1,6 +1,8 @@
 // 후보 봇의 상대별 "랠리" 승률 계측 (세트 승률과 별도)
 // 프로토콜: lag1, 지터 {0,8}, 양 진영, 시드 12 → 상대당 48세트
+// 사용법: node rally-stats.mjs [봇파일] [NAME=값,...] [상대파일,...]
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { loadBot, makeRng } from './arena.mjs';
 import { setCustomRng } from './rand.mjs';
@@ -8,6 +10,14 @@ import { PikaPhysics, PikaUserInput } from './physics.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const D = path.join(HERE, '..', 'src', 'code-here') + '/';
+const ME_OVERRIDES = process.argv[3]
+  ? Object.fromEntries(
+      process.argv[3].split(',').map((pair) => {
+        const [name, value] = pair.split('=');
+        return [name.trim(), Number(value)];
+      })
+    )
+  : null;
 const TICK = 3,
   NET = 216;
 const FROZEN_AFTER = 5,
@@ -17,7 +27,7 @@ const FROZEN_AFTER = 5,
 function runSet(meFile, oppFile, seed, jit, meLeft, agg) {
   const rng = makeRng(seed);
   setCustomRng(rng);
-  const me = loadBot(D + meFile, null);
+  const me = loadBot(D + meFile, ME_OVERRIDES);
   const op = loadBot(D + oppFile, null);
   const decides = meLeft ? [me, op] : [op, me];
   const physics = new PikaPhysics(false, false);
@@ -81,7 +91,14 @@ function runSet(meFile, oppFile, seed, jit, meLeft, agg) {
     };
     let a;
     try {
+      const startedAt = i === myIdx ? performance.now() : 0;
       a = decides[i](snap);
+      if (i === myIdx) {
+        const elapsed = performance.now() - startedAt;
+        agg.decisions++;
+        agg.decideMs += elapsed;
+        if (elapsed > agg.maxDecideMs) agg.maxDecideMs = elapsed;
+      }
     } catch (e) {
       a = { x: 0, y: 0, hit: 0 };
     }
@@ -186,7 +203,12 @@ const OPPS = [
   'LuckyPunch_v5.js',
   'LuckyPunch_v6.js',
   'LuckyPunch_v7.js',
-].filter((f) => f !== ME_FILE);
+  'LuckyPunch_v9.js',
+].filter(
+  (f) =>
+    f !== ME_FILE &&
+    (!process.argv[4] || process.argv[4].split(',').includes(f))
+);
 const pct = (w, n) =>
   n ? ((w / n) * 100).toFixed(1).padStart(5) + '%' : '    —';
 console.log(
@@ -203,6 +225,9 @@ for (const opp of OPPS) {
     srvW: 0,
     rcvR: 0,
     rcvW: 0,
+    decisions: 0,
+    decideMs: 0,
+    maxDecideMs: 0,
   };
   for (let i = 0; i < 12; i++)
     for (const jit of [0, 8])
@@ -216,5 +241,10 @@ for (const opp of OPPS) {
       agg.rcvW,
       agg.rcvR
     )}  | ${pct(agg.setWins, agg.sets)}`
+  );
+  console.log(
+    `     decide 평균 ${(
+      agg.decideMs / Math.max(1, agg.decisions)
+    ).toFixed(3)}ms / 최대 ${agg.maxDecideMs.toFixed(3)}ms`
   );
 }
