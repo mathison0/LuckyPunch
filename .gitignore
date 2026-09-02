@@ -5,6 +5,7 @@ analytics.html
 .firebaserc
 firebase.json
 .DS_Store
+.claude/
 
 # arena/ 의 엔진 사본은 sync-engine.sh 로 생성되는 파생물
 arena/physics.mjs
