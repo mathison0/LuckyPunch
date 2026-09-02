@@ -41,6 +41,20 @@ const PLAYER_HALF_LENGTH = (PLAYER_LENGTH / 2) | 0; // integer division
 const PLAYER_TOUCHING_GROUND_Y_COORD = 244;
 /** @constant @type {number} ball's radius */
 const BALL_RADIUS = 20;
+/**
+ * [실험] thunder 기술 대응: 공의 y축 속도(낙하/상승 속도) 상한.
+ *
+ * thunder는 78프레임짜리 녹화 입력이 끝난 뒤, 그 상황을 이어받은 내장 AI가
+ * 즉흥적으로 두 번째 파워히트를 날리면서 완성된다. 이 마지막 히트의 낙하속도가
+ * 64까지 나오는데, 이는 엔진의 파워히트 최저 속도(30, 즉 15*2)의 두 배가 넘는
+ * 값이다. 헤드리스 실측 결과, 상한을 60/50/40으로 걸어도 위력만 줄 뿐 여전히
+ * 상대가 못 받고 실점했고, 30(엔진의 파워히트 최저 속도와 동일)으로 걸어야만
+ * 비로소 200프레임 안에 점수가 나지 않았다.
+ *
+ * 즉 이 상한은 thunder만 막는 게 아니라 "모든 파워히트를 최저 위력으로 획일화"
+ * 하는 것과 같다. thunder만 겨냥한 정밀한 해법은 아니며, 실험용으로 남겨둔다.
+ */
+const BALL_MAX_Y_VELOCITY = 40;
 /** @constant @type {number} ball's y coordinate when it is touching ground */
 const BALL_TOUCHING_GROUND_Y_COORD = 252;
 /** @constant @type {number} net pillar's half width (this value is on this physics engine only, not on the sprite pixel size) */
@@ -412,6 +426,14 @@ function processCollisionBetweenBallAndWorldAndSetBallPosition(ball) {
   ball.previousX = ball.x;
   ball.previousY = ball.y;
 
+  // [실험] Y축 속도 상한. 이 함수는 매 프레임 무조건 호출되므로, 파워히트든
+  // 중력 누적이든 원인과 무관하게 이 지점에서 항상 걸린다.
+  if (ball.yVelocity > BALL_MAX_Y_VELOCITY) {
+    ball.yVelocity = BALL_MAX_Y_VELOCITY;
+  } else if (ball.yVelocity < -BALL_MAX_Y_VELOCITY) {
+    ball.yVelocity = -BALL_MAX_Y_VELOCITY;
+  }
+
   // "(ball.xVelocity / 2) | 0" is integer division by 2
   let futureFineRotation = ball.fineRotation + ((ball.xVelocity / 2) | 0);
   // If futureFineRotation === 50, it skips next if statement finely.
@@ -767,6 +789,14 @@ function calculateExpectedLandingPointXFor(ball) {
   while (true) {
     loopCounter++;
 
+    // [실험] 실물리와 동일한 y속도 상한 적용 (BALL_MAX_Y_VELOCITY 참조).
+    // 이게 없으면 예측기와 실제 궤적이 어긋나 AI가 착지점을 잘못 잡음.
+    if (copyBall.yVelocity > BALL_MAX_Y_VELOCITY) {
+      copyBall.yVelocity = BALL_MAX_Y_VELOCITY;
+    } else if (copyBall.yVelocity < -BALL_MAX_Y_VELOCITY) {
+      copyBall.yVelocity = -BALL_MAX_Y_VELOCITY;
+    }
+
     const futureCopyBallX = copyBall.xVelocity + copyBall.x;
     if (futureCopyBallX < 0 || futureCopyBallX > GROUND_WIDTH) {
       copyBall.xVelocity = -copyBall.xVelocity;
@@ -1004,6 +1034,14 @@ function expectedLandingPointXWhenPowerHit(
   let loopCounter = 0;
   while (true) {
     loopCounter++;
+
+    // [실험] 실물리와 동일한 y속도 상한 적용 (BALL_MAX_Y_VELOCITY 참조).
+    // 이게 없으면 예측기와 실제 궤적이 어긋나 AI가 착지점을 잘못 잡음.
+    if (copyBall.yVelocity > BALL_MAX_Y_VELOCITY) {
+      copyBall.yVelocity = BALL_MAX_Y_VELOCITY;
+    } else if (copyBall.yVelocity < -BALL_MAX_Y_VELOCITY) {
+      copyBall.yVelocity = -BALL_MAX_Y_VELOCITY;
+    }
 
     const futureCopyBallX = copyBall.x + copyBall.xVelocity;
     if (futureCopyBallX < 0 || futureCopyBallX > GROUND_WIDTH) {
