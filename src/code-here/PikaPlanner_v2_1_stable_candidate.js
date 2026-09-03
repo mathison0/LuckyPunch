@@ -45,7 +45,6 @@ const C = Object.freeze({
   JUMP_VY: -16,
   DIVE_VY: -5,
   GRAVITY: 1,
-  TICK_GROUP: 3,
 });
 
 // ============================================================================
@@ -201,7 +200,7 @@ function canonicalize(s) {
   return SKILL.transformContext({
     flip,
     tick: s.tick | 0,
-    tickGroup: (s.config && s.config.tickFrameGroupSize) || C.TICK_GROUP,
+    tickGroup: Math.max(1, s.config.tickFrameGroupSize | 0),
     self: {
       x: fx(s.self.x), y: s.self.y,
       state: s.self.state | 0,
@@ -263,7 +262,7 @@ const DIVE_TABLE = (() => {
   return arr;
 })();
 
-function inferVyFromTable(table, p, prevP, fallback) {
+function inferVyFromTable(table, p, prevP, fallback, tickGroup) {
   const trend = prevP ? sign(p.y - prevP.y) : 0;
   let best = null;
   let bestCost = 1e9;
@@ -277,14 +276,14 @@ function inferVyFromTable(table, p, prevP, fallback) {
     if (cost < bestCost) { bestCost = cost; best = vy; }
   }
   if (best != null) return best;
-  if (prevP) return clamp(Math.round((p.y - prevP.y) / C.TICK_GROUP), -16, 16);
+  if (prevP) return clamp(Math.round((p.y - prevP.y) / tickGroup), -16, 16);
   return fallback;
 }
 
-function estimatePlayerVy(p, prevP) {
+function estimatePlayerVy(p, prevP, tickGroup) {
   if (p.state === 0 || p.state === 4 || p.state >= 5) return 0;
-  if (p.state === 3) return inferVyFromTable(DIVE_TABLE, p, prevP, C.DIVE_VY);
-  return inferVyFromTable(JUMP_TABLE, p, prevP, -4);
+  if (p.state === 3) return inferVyFromTable(DIVE_TABLE, p, prevP, C.DIVE_VY, tickGroup);
+  return inferVyFromTable(JUMP_TABLE, p, prevP, -4, tickGroup);
 }
 
 function updateMemory(c) {
@@ -849,12 +848,12 @@ function groundXTimelineToTarget(c, targetX, maxT) {
   let heldX = MEM.lastAction.x;
   for (let t = 1; t <= maxT; t++) {
     // Current decision starts affecting physics after ACTION_LATENCY frames;
-    // subsequent decisions refresh every TICK_GROUP frames.  The tactical
+    // subsequent decisions refresh every snapshot-configured tick group. The tactical
     // target remains the same, so only the held direction is resampled.
     if (
       t === CFG.ACTION_LATENCY + 1 ||
       (t > CFG.ACTION_LATENCY + 1 &&
-        (t - (CFG.ACTION_LATENCY + 1)) % C.TICK_GROUP === 0)
+        (t - (CFG.ACTION_LATENCY + 1)) % c.tickGroup === 0)
     ) {
       heldX = moveToward(x, targetX);
     }
@@ -940,11 +939,11 @@ function bestPowerValueFromContactBall(c, bf, contactFrame, oppVy) {
   return best;
 }
 
-function chooseHeldXForContact(xAfterLatency, bfX, moveFrames) {
+function chooseHeldXForContact(xAfterLatency, bfX, moveFrames, tickGroup) {
   let bestX = 0;
   let bestSlack = -1e9;
   for (let x = -1; x <= 1; x++) {
-    const held = min(C.TICK_GROUP, moveFrames);
+    const held = min(tickGroup, moveFrames);
     const x1 = clamp(xAfterLatency + x * C.WALK * held, C.LEFT_MIN, C.LEFT_MAX);
     const rem = max(0, moveFrames - held);
     const slack = rem * C.WALK + C.PLAYER_HALF - abs(bfX - x1);
@@ -967,7 +966,7 @@ function findJumpTakeoff(c, freeTr, oppVy) {
     if (abs(bf.y - py) > C.PLAYER_HALF - 2) continue;
 
     const moveFrames = max(0, t - CFG.ACTION_LATENCY);
-    const heldChoice = chooseHeldXForContact(xAfterLatency, bf.x, moveFrames);
+    const heldChoice = chooseHeldXForContact(xAfterLatency, bf.x, moveFrames, c.tickGroup);
     if (heldChoice.slack < 0) continue;
 
     let value;
@@ -1006,7 +1005,7 @@ function findAirborneIntercept(c, freeTr, selfVy) {
     if (bf.x > C.NET_X + 8 || bf.ground) continue;
     const py = tl[min(t, tl.length - 1)].y;
     if (abs(bf.y - py) > C.PLAYER_HALF - 2) continue;
-    const heldChoice = chooseHeldXForContact(c.self.x, bf.x, t);
+    const heldChoice = chooseHeldXForContact(c.self.x, bf.x, t, c.tickGroup);
     if (heldChoice.slack < 0) continue;
     const score = 120 - t * 2 + min(20, heldChoice.slack) + max(0, 180 - bf.y) * 0.05;
     if (!best || score > best.score) {
@@ -1115,13 +1114,15 @@ function predictOpponentThreats(c, oppVy) {
 // Fast analytic defender model used only to choose a standby X. The real
 // incoming-ball planner later uses the exact current trajectory and contact
 // geometry, so this function intentionally favors robustness over precision.
-function reactionLockAfterOpponentContact(contactFrame) {
-  // Snapshot cadence is frames 3,6,9... relative to the snapshot that called
+function reactionLockAfterOpponentContact(contactFrame, tickGroup) {
+  // Snapshot cadence follows config.tickFrameGroupSize relative to the snapshot that called
   // us. If the opponent contact happens on a snapshot frame, that snapshot
-  // was taken BEFORE physics/collision, so the first informed action is four
-  // frames later. Otherwise it is 3 or 2 frames later.
-  const r = contactFrame % C.TICK_GROUP;
-  return r === 0 ? 4 : 4 - r;
+  // was taken BEFORE physics/collision, so the first informed action arrives
+  // one action-latency window after the next snapshot.
+  const r = contactFrame % tickGroup;
+  return r === 0
+    ? tickGroup + CFG.ACTION_LATENCY
+    : tickGroup + CFG.ACTION_LATENCY - r;
 }
 
 function groundStartInterceptScore(x0, tr, lockFrames) {
@@ -1170,7 +1171,7 @@ function chooseDefensiveStandby(c, oppVy, precomputedThreats) {
     let worst = 1e9;
     for (let i = 0; i < threats.length; i++) {
       const th = threats[i];
-      const lock = reactionLockAfterOpponentContact(th.contactFrame);
+      const lock = reactionLockAfterOpponentContact(th.contactFrame, c.tickGroup);
       const s = groundStartInterceptScore(x, th.tr, lock);
       if (s < worst) worst = s;
     }
@@ -1346,8 +1347,8 @@ function decide(snapshot) {
 
   const prevSelf = MEM.prev ? MEM.prev.self : null;
   const prevOpp = MEM.prev ? MEM.prev.opp : null;
-  const selfVy = estimatePlayerVy(c.self, prevSelf);
-  const oppVy = estimatePlayerVy(c.opp, prevOpp);
+  const selfVy = estimatePlayerVy(c.self, prevSelf, c.tickGroup);
+  const oppVy = estimatePlayerVy(c.opp, prevOpp, c.tickGroup);
 
   let planned;
   try {
