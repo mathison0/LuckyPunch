@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-09-01T11:10:50.204Z",
+  "botFile": "/mnt/data/pikachu_bot_package/PikaPlanner_v1.js",
+  "cfg": {
+    "MOVE_DEADBAND": 7,
+    "STANDBY_X": 109,
+    "BODY_RECEIVE_OFFSET": 22,
+    "BODY_RECEIVE_OFFSET_NEAR_NET": 13,
+    "JUMP_SEARCH_HORIZON": 26,
+    "POWER_ARM_DISTANCE_X": 63,
+    "POWER_ARM_DISTANCE_Y": 72,
+    "DOWN_SMASH_MAX_NET_DISTANCE": 79,
+    "DIVE_MAX_LOOKAHEAD": 9,
+    "SHOT_REACH_MARGIN_WEIGHT": 1.325,
+    "SHOT_DISTANCE_WEIGHT": 0.269,
+    "SHOT_TIME_PRESSURE_WEIGHT": 21.666,
+    "JUMP_ATTACK_BONUS": 20.525,
+    "CONTACT_LATE_PENALTY": 0.455
+  },
+  "score": 199.20833333333334,
+  "details": [
+    {
+      "opponent": "BaselinePositioning_v1.js",
+      "candidateWinRate": 0.8333333333333334,
+      "pointDiff": 4.25
+    },
+    {
+      "opponent": "BaselineAggressive_v1.js",
+      "candidateWinRate": 1,
+      "pointDiff": 6.333333333333334
+    }
+  ]
+}
