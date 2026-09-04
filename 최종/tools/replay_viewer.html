@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PikaPlanner Replay Viewer</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:20px;background:#111;color:#eee}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  canvas{background:#dff3ff;border:1px solid #666;image-rendering:pixelated;max-width:100%;height:auto}
+  button,input,select{font:inherit}
+  #info{white-space:pre-wrap;font-family:ui-monospace,monospace;background:#1b1b1b;padding:10px;border-radius:8px;min-height:90px}
+  .event{font-weight:700;color:#ffd166}
+</style>
+</head>
+<body>
+<h1>PikaPlanner Replay Viewer</h1>
+<div class="row">
+  <input id="file" type="file" accept="application/json,.json" />
+  <button id="play">▶ 재생</button>
+  <button id="prev">◀ 1F</button>
+  <button id="next">1F ▶</button>
+  <label>속도 <select id="speed"><option>0.5</option><option selected>1</option><option>2</option><option>4</option><option>8</option></select>x</label>
+  <label><input id="trail" type="checkbox" checked /> 공 궤적</label>
+</div>
+<div class="row"><input id="slider" type="range" min="0" max="0" value="0" style="width:min(900px,95vw)" /></div>
+<canvas id="court" width="864" height="608"></canvas>
+<div id="info">replay.json을 선택하세요.</div>
+<script>
+const SCALE=2, W=432, H=304, NET=216;
+const cvs=document.getElementById('court'), ctx=cvs.getContext('2d');
+const file=document.getElementById('file'), slider=document.getElementById('slider');
+const play=document.getElementById('play'), prev=document.getElementById('prev'), next=document.getElementById('next');
+const speed=document.getElementById('speed'), trail=document.getElementById('trail'), info=document.getElementById('info');
+let data=null, idx=0, playing=false, timer=null;
+function X(x){return x*SCALE} function Y(y){return y*SCALE}
+function drawPlayer(p,label){
+  ctx.fillStyle=label==='L'?'#f4d35e':'#ee6c4d';
+  ctx.fillRect(X(p.x-32),Y(p.y-32),64*SCALE,64*SCALE);
+  ctx.fillStyle='#111';ctx.font='20px system-ui';ctx.fillText(label,X(p.x)-6,Y(p.y)+6);
+}
+function draw(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle='#e8f7ff';ctx.fillRect(0,0,cvs.width,cvs.height);
+  ctx.fillStyle='#b7e4a8';ctx.fillRect(0,Y(252),cvs.width,H*SCALE-Y(252));
+  ctx.fillStyle='#777';ctx.fillRect(X(NET-25),Y(176),50*SCALE,(252-176)*SCALE);
+  ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.strokeRect(0,0,cvs.width,cvs.height);
+  if(!data||!data.frames.length)return;
+  const f=data.frames[idx];
+  if(trail.checked){
+    ctx.strokeStyle='rgba(20,70,160,.45)';ctx.lineWidth=3;ctx.beginPath();
+    const st=Math.max(0,idx-70);for(let i=st;i<=idx;i++){const b=data.frames[i].ball;if(i===st)ctx.moveTo(X(b.x),Y(b.y));else ctx.lineTo(X(b.x),Y(b.y));}ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(150,0,180,.6)';ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(X(f.ball.landingX),Y(220));ctx.lineTo(X(f.ball.landingX),Y(252));ctx.stroke();ctx.setLineDash([]);
+  drawPlayer(f.p1,'L');drawPlayer(f.p2,'R');
+  ctx.fillStyle=f.ball.isPowerHit?'#ef233c':'#2b2d42';ctx.beginPath();ctx.arc(X(f.ball.x),Y(f.ball.y),20*SCALE,0,Math.PI*2);ctx.fill();
+  if(f.events&&f.events.length){ctx.fillStyle='#9b2226';ctx.font='bold 24px system-ui';ctx.fillText(f.events.join(' · '),16,34);}
+  const m=data.meta;
+  const dl=f.debugLeft?`\nL plan=${f.debugLeft.mode} target=${f.debugLeft.targetX} value=${f.debugLeft.value} contact=${f.debugLeft.contactFrame}`:'';
+  const dr=f.debugRight?`\nR plan=${f.debugRight.mode} target=${f.debugRight.targetX} value=${f.debugRight.value} contact=${f.debugRight.contactFrame}`:'';
+  info.textContent=`${m.left}  ${f.score[0]} : ${f.score[1]}  ${m.right}\nframe ${f.frame}/${m.totalFrames}\nball x=${f.ball.x} y=${f.ball.y} vx=${f.ball.vx} vy=${f.ball.vy} landingX=${f.ball.landingX}\nL state=${f.p1.state} action=${JSON.stringify(f.action1)} | R state=${f.p2.state} action=${JSON.stringify(f.action2)}\nevents=${(f.events||[]).join(', ')||'-'}${dl}${dr}${f.result?'\nPOINT '+JSON.stringify(f.result):''}`;
+}
+function setIndex(n){if(!data)return;idx=Math.max(0,Math.min(data.frames.length-1,n));slider.value=idx;draw()}
+function stop(){playing=false;play.textContent='▶ 재생';if(timer)clearTimeout(timer);timer=null}
+function loop(){if(!playing||!data)return;const step=Math.max(1,Math.round(Number(speed.value)));setIndex(idx+step);if(idx>=data.frames.length-1){stop();return}timer=setTimeout(loop,40/Math.max(.5,Number(speed.value)))}
+file.onchange=async()=>{const f=file.files[0];if(!f)return;data=JSON.parse(await f.text());idx=0;slider.max=Math.max(0,data.frames.length-1);slider.value=0;stop();draw()};
+slider.oninput=()=>{stop();setIndex(Number(slider.value))};
+play.onclick=()=>{playing=!playing;play.textContent=playing?'⏸ 일시정지':'▶ 재생';if(playing)loop();else stop()};
+prev.onclick=()=>{stop();setIndex(idx-1)};next.onclick=()=>{stop();setIndex(idx+1)};trail.onchange=draw;
+draw();
+</script>
+</body></html>
