@@ -1,0 +1,14 @@
+No-op scaffold verification
+===========================
+
+- JavaScript syntax check: PASS
+- Sequential synthetic snapshot equivalence: PASS
+- 4,000 snapshots, independent memory state for base/scaffold
+- Output action: identical for all 4,000 snapshots
+
+Meaning:
+The mobility scaffold is currently inert. Until match-day code is filled in,
+it does not change current v2.1 decisions in this synthetic regression check.
+
+This is not a substitute for the real browser-engine regression suite, but it
+confirms that the added preparation block itself is behavior-neutral.
