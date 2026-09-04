@@ -1,40 +1,27 @@
 'use strict';
 
 /*
- * PikaPlanner v2.1.1 — net-front defense stability patch
- *
- * Minimal correctness patch on top of v2.1:
- *   1) predict opponent contact even when the outgoing ball has not crossed yet,
- *   2) grade impossible defensive threats by miss distance instead of flat -1000,
- *   3) never count the already-GROUND frame as a successful defensive contact.
- *
- * Offense, self-set, cushion physics, power-hit search and skill adapter are
- * otherwise unchanged from the supplied v2.1 stable candidate.
- */
-
-/*
- * PikaPlanner_v3.js
+ * PikaPlanner_v4.js
  * ============================================================================
- * Rebuilt competition bot for the disclosed Pikachu / Leonyi Volleyball engine.
- * Version 3 stable: v3 net-front defense + long-rally timing/reach/touch correctness fixes.
+ * Current stable baseline for the disclosed Pikachu / Leonyi Volleyball engine.
  *
- * v2 design principles
- * --------------------
- * 1. Canonical LEFT-side coordinates everywhere inside the planner.
- * 2. One physics implementation is shared by offense, defense and prediction.
- * 3. Every simulated ball trajectory records WALL / NET_TOP / NET_SIDE events.
- * 4. Shot quality is evaluated against the opponent's FULL trajectory
- *    interceptability, not only final landing X.
- * 5. Opponent reachability is propagated in 3-frame held-action blocks so
- *    jump / dive / committed states are represented explicitly.
- * 6. Opponent pre-contact defense predicts the opponent's future CONTACT first,
- *    then rolls out the shots they can create from that contact state.
- * 7. Planner intent and engine action are separated by a safety executor so
- *    held inputs cannot accidentally turn into a dive / re-jump after landing.
- * 8. Tournament-day skill changes are isolated to the SKILL adapter and a few
- *    clearly marked hooks.
+ * v4 keeps the v3 net-front defense and long-rally correctness fixes, then
+ * cleans up two tournament-day integration points without changing ordinary
+ * play in the current ruleset:
+ *   - scheduler cadence uses snapshot.config.tickFrameGroupSize consistently,
+ *   - the SKILL adapter now has live hooks for reach, opponent threats and
+ *     skill-specific action fields.
  *
- * The file has no imports and defines the required top-level decide(snapshot).
+ * Core design:
+ *   1) canonical LEFT-side planning,
+ *   2) one ball-physics implementation for attack/defense/prediction,
+ *   3) first-real-contact receive planning,
+ *   4) full-trajectory attack scoring against opponent reachability,
+ *   5) opponent-contact-first defense with net-front early-contact awareness,
+ *   6) long-rally touch-limit and sampled-control safety,
+ *   7) a narrow SKILL adapter so tournament-day changes stay localized.
+ *
+ * No imports. Required entry point: decide(snapshot).
  */
 
 // ============================================================================
@@ -78,7 +65,6 @@ const DEFAULT_CFG = Object.freeze({
   // the ball, sending an ordinary bump toward the net/right.
   RECEIVE_OFFSETS: [8, 12, 18, 24, 30],
   SELF_SET_TARGET_X: 170,
-  SELF_SET_MAX_TOUCH_EST: 2,
   SELF_SET_DEEP_BALL_X: 142,
   SELF_SET_SCORE: 92,
 
@@ -106,10 +92,6 @@ const DEFAULT_CFG = Object.freeze({
   SHOT_LATE_REVERSAL_BONUS: 5,
   SHOT_SELF_SIDE_PENALTY: 20000,
 
-  // Reachability search. This is used for opponent shot-return evaluation.
-  REACH_MAX_STATES: 4500,
-  REACH_X_QUANT: 1,
-
   // Defensive pre-positioning
   DEFENSE_X_STEP: 8,
   DEFENSE_MOVE_COST: 0.30,
@@ -124,6 +106,16 @@ const DEFAULT_CFG = Object.freeze({
 
   // Input hold safety
   LANDING_SAFETY_FRAMES: 3,
+
+  // Extremely long deterministic rallies can enter a repeating orbit. These
+  // values only alter defensive pre-positioning after ~36 seconds at 25 FPS.
+  // With the tournament's 4-minute set limit, a 36-second no-progress rally is
+  // already strategically expensive, so breaking exact loops is worth a very
+  // small deterministic positioning nudge.
+  LONG_RALLY_BREAK_FRAME: 900,
+  LONG_RALLY_NUDGE_PERIOD: 97,
+  LONG_RALLY_NUDGE_PX: 6,
+  LONG_RALLY_MIN_THREAT_LEAD: 10,
 
   // Match context
   LEAD_SAFE: 2,
@@ -148,8 +140,9 @@ const CFG = Object.assign({}, DEFAULT_CFG, RUNTIME_CFG || {});
 // [C] SKILL ADAPTER -- TOURNAMENT-DAY PRIMARY EDIT AREA
 // ============================================================================
 const SKILL = {
+  // Read only the fields added by the tournament-day repository. Keep this
+  // function harmless when those fields do not exist.
   read(_snapshot) {
-    // Fill only after the real skill fields are released.
     return { enabled: false };
   },
 
@@ -157,27 +150,47 @@ const SKILL = {
     return ctx;
   },
 
-  // Called once inside the ordinary world-ball frame update. If a released
-  // skill modifies gravity / speed / collision, mirror the released frame
-  // order here rather than sprinkling skill checks through the planner.
+  // If the skill changes ball physics (speed, gravity, bounce, curve...), apply
+  // the exact released frame order here. This hook is already called by the
+  // single world-ball simulator used everywhere.
   ballFrameHook(_ball, _skillState, _events) {},
 
-  // Optional player reach modifier (dash, enlarged hitbox, etc.).
-  reachActions(_node, _who, _ctx) {
+  // Live reach hook. `baseResult` is what ordinary movement/jump/dive can do.
+  // Return null to keep it. For a dash/teleport/enlarged-hitbox skill, return
+  // {can:boolean, options:number} after checking gauge/cooldown and timing.
+  reachOverride(_ctx, _who, _query, _baseResult) {
+    return null;
+  },
+
+  // Add trajectories the opponent could create with the released skill. Each
+  // item should use the same threat shape as predictOpponentThreats():
+  // {type, contactFrame, tr, landing}. Empty means ordinary rules only.
+  extraOpponentThreats(_ctx, _oppVy) {
     return [];
   },
 
-  // Optional additional tactical candidate actions.
-  extraActions(_ctx) {
+  // Add a complete tactical plan that uses the skill. `helpers` exposes the
+  // existing simulator/evaluator so match-day code does not need to duplicate
+  // physics. Empty means ordinary planner only.
+  extraActions(_ctx, _helpers) {
     return [];
   },
 
+  // Optional extra score for skill-related candidates/trajectories.
   evaluate(_ctx, _candidate) {
     return 0;
   },
 
+  // Last-resort override for a released defensive/escape skill.
   emergencyOverride(_ctx, _planned) {
     return null;
+  },
+
+  // If skill activation requires extra decide() return fields, add them here.
+  // Example only after reading the released repo: {...base, skill: true}.
+  // Ordinary x/y/hit are preserved by the caller.
+  decorateAction(_ctx, _planned, base) {
+    return base;
   },
 };
 
@@ -242,7 +255,27 @@ function canonicalize(s) {
 }
 
 function uncanonicalize(a, flip) {
-  return { x: flip ? -a.x : a.x, y: a.y, hit: a.hit };
+  const out = Object.assign({}, a);
+  out.x = flip ? -a.x : a.x;
+  out.y = a.y;
+  out.hit = a.hit;
+  return out;
+}
+
+// Between points the real game keeps calling decide() while physics is frozen.
+// The round-reset state is distinctive: both players are at spawn and the ball
+// is stationary at the serve spawn (y=0, vx=0, vy=1). If we treat those
+// repeated snapshots as live physics, touch inference drifts and a held jump can
+// be applied on the first real frame. Detect only the exact reset geometry so
+// normal ceiling contacts are not mistaken for a frozen round.
+function isRoundFrozenState(c) {
+  const ballAtServeSpawn =
+    c.ball.y === 0 && c.ball.vx === 0 && c.ball.vy === 1 &&
+    (c.ball.x === 56 || c.ball.x === 376);
+  const playersAtSpawn =
+    c.self.x === 36 && c.self.y === C.PLAYER_GROUND_Y && c.self.state === 0 &&
+    c.opp.x === 396 && c.opp.y === C.PLAYER_GROUND_Y && c.opp.state === 0;
+  return ballAtServeSpawn && playersAtSpawn;
 }
 
 // ============================================================================
@@ -276,7 +309,7 @@ const DIVE_TABLE = (() => {
   return arr;
 })();
 
-function inferVyFromTable(table, p, prevP, fallback) {
+function inferVyFromTable(table, p, prevP, fallback, tickGroup) {
   const trend = prevP ? sign(p.y - prevP.y) : 0;
   let best = null;
   let bestCost = 1e9;
@@ -290,19 +323,29 @@ function inferVyFromTable(table, p, prevP, fallback) {
     if (cost < bestCost) { bestCost = cost; best = vy; }
   }
   if (best != null) return best;
-  if (prevP) return clamp(Math.round((p.y - prevP.y) / C.TICK_GROUP), -16, 16);
+  if (prevP) return clamp(Math.round((p.y - prevP.y) / max(1, tickGroup || C.TICK_GROUP)), -16, 16);
   return fallback;
 }
 
-function estimatePlayerVy(p, prevP) {
+function estimatePlayerVy(p, prevP, tickGroup) {
   if (p.state === 0 || p.state === 4 || p.state >= 5) return 0;
-  if (p.state === 3) return inferVyFromTable(DIVE_TABLE, p, prevP, C.DIVE_VY);
-  return inferVyFromTable(JUMP_TABLE, p, prevP, -4);
+  if (p.state === 3) return inferVyFromTable(DIVE_TABLE, p, prevP, C.DIVE_VY, tickGroup);
+  return inferVyFromTable(JUMP_TABLE, p, prevP, -4, tickGroup);
 }
 
 function updateMemory(c) {
   const scoreChanged = c.scoreSelf !== MEM.lastScoreSelf || c.scoreOpp !== MEM.lastScoreOpp;
   if (scoreChanged) {
+    MEM.ownTouchEstimate = 0;
+    MEM.oppTouchEstimate = 0;
+    MEM.selfSetUsed = false;
+    MEM.selfSetPendingTick = null;
+  }
+
+  // Round-transition snapshots are repeated while physics is paused. They are
+  // not contacts and must never advance the touch estimator. Keep possession
+  // safety clean until the first real physics frame arrives.
+  if (c.roundFrozen) {
     MEM.ownTouchEstimate = 0;
     MEM.oppTouchEstimate = 0;
     MEM.selfSetUsed = false;
@@ -339,7 +382,7 @@ function updateMemory(c) {
     // frame, so "velocity changed" by itself is NOT evidence of a touch.
     // If world-only physics cannot explain the observed state, a player
     // collision happened somewhere in this snapshot interval.
-    if (!scoreChanged) {
+    if (!scoreChanged && !c.roundFrozen && !MEM.prev.roundFrozen) {
       const dt = c.tick - MEM.prev.tick;
       if (dt > 0 && dt <= 12) {
         const predicted = cloneBall(MEM.prev.ball);
@@ -597,27 +640,38 @@ function diveCanReachAt(p, side, t, bf) {
   return false;
 }
 
-function canPlayerReachBallAt(p, vy, side, globalT, bf) {
+function canPlayerReachBallAt(p, vy, side, globalT, bf, c, who) {
   const xi = horizontalInterval(p, vy, side, globalT);
-  if (!xIntervalHits(xi, bf.x)) {
-    // A fresh dive can outrun ordinary walking horizontally.
-    if (!diveCanReachAt(p, side, globalT, bf)) return { can: false, options: 0 };
-  }
-
-  const verticalOptions = jumpVerticalOptionsAt(p, vy, globalT, bf.y, globalT + 2);
   const dive = diveCanReachAt(p, side, globalT, bf);
+  const horizontalOK = xIntervalHits(xi, bf.x) || dive;
+  const verticalOptions = horizontalOK
+    ? jumpVerticalOptionsAt(p, vy, globalT, bf.y, globalT + 2)
+    : 0;
   const options = verticalOptions + (dive ? 1 : 0);
-  return { can: options > 0, options };
+  const base = { can: horizontalOK && options > 0, options };
+
+  if (c) {
+    const override = SKILL.reachOverride(c, who || 'unknown', {
+      player: p, vy, side, globalT, ballFrame: bf, horizontalInterval: xi,
+    }, base);
+    if (override && typeof override.can === 'boolean') {
+      return {
+        can: !!override.can,
+        options: typeof override.options === 'number' ? override.options : (override.can ? max(1, base.options) : 0),
+      };
+    }
+  }
+  return base;
 }
 
-function interceptTrajectory(p, vy, side, tr, preFrames) {
+function interceptTrajectory(p, vy, side, tr, preFrames, c, who) {
   let earliest = 999;
   let totalOptions = 0;
   let earliestOptions = 0;
   for (let i = 0; i < tr.frames.length; i++) {
     const bf = tr.frames[i];
     const globalT = preFrames + i + 1;
-    const r = canPlayerReachBallAt(p, vy, side, globalT, bf);
+    const r = canPlayerReachBallAt(p, vy, side, globalT, bf, c, who);
     if (r.can) {
       totalOptions += r.options;
       if (earliest === 999) {
@@ -677,7 +731,7 @@ function evaluateOutgoingTrajectory(tr, c, oppVy, contactFrame) {
     };
   }
 
-  const intercept = interceptTrajectory(c.opp, oppVy, 'RIGHT', tr, contactFrame);
+  const intercept = interceptTrajectory(c.opp, oppVy, 'RIGHT', tr, contactFrame, c, 'opp');
   let score;
   if (!intercept.canIntercept) {
     score = CFG.SHOT_UNRETURNABLE;
@@ -904,7 +958,7 @@ function groundXTimelineToTarget(c, targetX, maxT) {
     // queue it for later application. This fixes a subtle optimistic bug in
     // the old model, which waited until apply-time and then recomputed from a
     // position the real bot never observed when making that decision.
-    if ((t - 1) % C.TICK_GROUP === 0) {
+    if ((t - 1) % max(1, c.tickGroup) === 0) {
       pending.push({
         applyT: t + CFG.ACTION_LATENCY,
         x: moveToward(x, targetX),
@@ -997,11 +1051,11 @@ function bestPowerValueFromContactBall(c, bf, contactFrame, oppVy) {
   return best;
 }
 
-function chooseHeldXForContact(xAfterLatency, bfX, moveFrames) {
+function chooseHeldXForContact(xAfterLatency, bfX, moveFrames, tickGroup) {
   let bestX = 0;
   let bestSlack = -1e9;
   for (let x = -1; x <= 1; x++) {
-    const held = min(C.TICK_GROUP, moveFrames);
+    const held = min(max(1, tickGroup || C.TICK_GROUP), moveFrames);
     const x1 = clamp(xAfterLatency + x * C.WALK * held, C.LEFT_MIN, C.LEFT_MAX);
     const rem = max(0, moveFrames - held);
 
@@ -1032,7 +1086,7 @@ function findJumpTakeoff(c, freeTr, oppVy) {
     if (abs(bf.y - py) > C.PLAYER_HALF - 2) continue;
 
     const moveFrames = max(0, t - CFG.ACTION_LATENCY);
-    const heldChoice = chooseHeldXForContact(xAfterLatency, bf.x, moveFrames);
+    const heldChoice = chooseHeldXForContact(xAfterLatency, bf.x, moveFrames, c.tickGroup);
     if (heldChoice.slack < 0) continue;
 
     let value;
@@ -1059,11 +1113,11 @@ function findJumpTakeoff(c, freeTr, oppVy) {
   return best;
 }
 
-function chooseHeldXForCenter(xAfterLatency, targetX, moveFrames) {
+function chooseHeldXForCenter(xAfterLatency, targetX, moveFrames, tickGroup) {
   let bestX = 0;
   let bestSlack = -1e9;
   for (let x = -1; x <= 1; x++) {
-    const held = min(C.TICK_GROUP, moveFrames);
+    const held = min(max(1, tickGroup || C.TICK_GROUP), moveFrames);
     const x1 = clamp(xAfterLatency + x * C.WALK * held, C.LEFT_MIN, C.LEFT_MAX);
     const rem = max(0, moveFrames - held);
     const lo = max(C.LEFT_MIN, x1 - rem * C.WALK);
@@ -1094,7 +1148,7 @@ function findAirborneEmergencyClear(c, freeTr, selfVy, oppVy) {
     for (let oi = 0; oi < CFG.RECEIVE_OFFSETS.length; oi++) {
       const px = clamp(bf.x - CFG.RECEIVE_OFFSETS[oi], C.LEFT_MIN, C.LEFT_MAX);
       if (abs(bf.x - px) > C.PLAYER_HALF || abs(bf.x - px) < 3) continue;
-      const heldChoice = chooseHeldXForCenter(xAfterLatency, px, moveFrames);
+      const heldChoice = chooseHeldXForCenter(xAfterLatency, px, moveFrames, c.tickGroup);
       if (heldChoice.slack < 0) continue;
       const ev = evaluateBodyContact(c, bf, px, t, oppVy);
       if (!ev || ev.type !== 'CLEAR') continue;
@@ -1202,7 +1256,7 @@ function predictOpponentThreats(c, oppVy) {
       break;
     }
     const t = i + 1;
-    const r = canPlayerReachBallAt(c.opp, oppVy, 'RIGHT', t, bf);
+    const r = canPlayerReachBallAt(c.opp, oppVy, 'RIGHT', t, bf, c, 'opp');
     if (r.can) {
       if (earliest == null) earliest = t;
       if (t <= earliest + CFG.DEFENSE_CONTACT_WINDOW) {
@@ -1227,6 +1281,14 @@ function predictOpponentThreats(c, oppVy) {
     if (threats.length >= CFG.DEFENSE_THREAT_LIMIT) break;
   }
 
+  // Skill-day extension: append any extra opponent trajectories generated by
+  // the released skill before the same deduplication/ranking path.
+  const skillThreats = SKILL.extraOpponentThreats(c, oppVy) || [];
+  for (let i = 0; i < skillThreats.length && threats.length < CFG.DEFENSE_THREAT_LIMIT * 2; i++) {
+    const th = skillThreats[i];
+    if (th && th.tr && th.landing) threats.push(th);
+  }
+
   // Deduplicate by coarse signature; keep event-rich variants distinct.
   const map = new Map();
   for (let i = 0; i < threats.length; i++) {
@@ -1241,13 +1303,15 @@ function predictOpponentThreats(c, oppVy) {
 // Fast analytic defender model used only to choose a standby X. The real
 // incoming-ball planner later uses the exact current trajectory and contact
 // geometry, so this function intentionally favors robustness over precision.
-function reactionLockAfterOpponentContact(contactFrame) {
-  // Snapshot cadence is frames 3,6,9... relative to the snapshot that called
-  // us. If the opponent contact happens on a snapshot frame, that snapshot
-  // was taken BEFORE physics/collision, so the first informed action is four
-  // frames later. Otherwise it is 3 or 2 frames later.
-  const r = contactFrame % C.TICK_GROUP;
-  return r === 0 ? 4 : 4 - r;
+function reactionLockAfterOpponentContact(contactFrame, tickGroup) {
+  // If contact occurs after the current snapshot, the next snapshot that can
+  // observe it arrives at the next cadence boundary; its action then needs the
+  // measured ACTION_LATENCY before application. For group=3, latency=1 this is
+  // the familiar 4/3/2-frame lock.
+  const g = max(1, tickGroup || C.TICK_GROUP);
+  const r = contactFrame % g;
+  const toNextSnapshot = r === 0 ? g : g - r;
+  return toNextSnapshot + CFG.ACTION_LATENCY;
 }
 
 function groundStartInterceptScore(x0, tr, lockFrames) {
@@ -1295,13 +1359,28 @@ function groundStartInterceptScore(x0, tr, lockFrames) {
   return -CFG.DEFENSE_NO_INTERCEPT_PENALTY * 2;
 }
 
+function longRallyDefenseNudge(c, threats) {
+  // Exact deterministic rallies can enter a repeating orbit because both bots
+  // see the same state and choose the same action forever. Only after an
+  // exceptionally long rally, and only when the next opponent contact is not
+  // immediate, introduce a tiny deterministic pre-position variation. The
+  // 97-frame phase is intentionally unrelated to the 3-frame decision cadence.
+  if (c.rallyFrameCount < CFG.LONG_RALLY_BREAK_FRAME) return 0;
+  let firstContact = 999;
+  for (let i = 0; i < threats.length; i++) firstContact = min(firstContact, threats[i].contactFrame);
+  if (firstContact < CFG.LONG_RALLY_MIN_THREAT_LEAD) return 0;
+  const phase = Math.floor((c.rallyFrameCount - CFG.LONG_RALLY_BREAK_FRAME) / CFG.LONG_RALLY_NUDGE_PERIOD) % 3;
+  return phase === 0 ? -CFG.LONG_RALLY_NUDGE_PX : phase === 1 ? CFG.LONG_RALLY_NUDGE_PX : 0;
+}
+
 function chooseDefensiveStandby(c, oppVy, precomputedThreats) {
   const threats = precomputedThreats || predictOpponentThreats(c, oppVy);
   if (!threats.length) {
     // Mildly bias opposite the opponent's current position. This creates room
     // against both short and deep direct returns without committing to a wall.
     const bias = clamp((c.opp.x - 324) * -0.10, -14, 14);
-    return clamp(CFG.HOME_X + bias, 72, 148);
+    const base = clamp(CFG.HOME_X + bias, 72, 148);
+    return clamp(base + longRallyDefenseNudge(c, threats), C.LEFT_MIN, C.LEFT_MAX);
   }
 
   let bestX = CFG.HOME_X;
@@ -1310,7 +1389,7 @@ function chooseDefensiveStandby(c, oppVy, precomputedThreats) {
     let worst = 1e9;
     for (let i = 0; i < threats.length; i++) {
       const th = threats[i];
-      const lock = reactionLockAfterOpponentContact(th.contactFrame);
+      const lock = reactionLockAfterOpponentContact(th.contactFrame, c.tickGroup);
       const s = groundStartInterceptScore(x, th.tr, lock);
       if (s < worst) worst = s;
     }
@@ -1318,7 +1397,7 @@ function chooseDefensiveStandby(c, oppVy, precomputedThreats) {
     const total = worst - moveCost;
     if (total > bestWorst) { bestWorst = total; bestX = x; }
   }
-  return bestX;
+  return clamp(bestX + longRallyDefenseNudge(c, threats), C.LEFT_MIN, C.LEFT_MAX);
 }
 
 // ============================================================================
@@ -1472,7 +1551,7 @@ function executeSafely(c, planned, selfVy) {
 
 function debugLog(c, planned, a) {
   if (!CFG.DEBUG || MEM.decisions % CFG.DEBUG_EVERY !== 0) return;
-  console.log('[PikaPlanner_v2]', {
+  console.log('[PikaPlanner_v4]', {
     tick: c.tick,
     mode: planned.type,
     self: [c.self.x, c.self.y, c.self.state],
@@ -1489,31 +1568,63 @@ function debugLog(c, planned, a) {
 // ============================================================================
 function decide(snapshot) {
   const c = canonicalize(snapshot);
+  c.roundFrozen = isRoundFrozenState(c);
   MEM.decisions++;
   MEM.worldFlip = !!c.flip;
   updateMemory(c);
 
+  // During the inter-round freeze, physics is paused but decide() still runs.
+  // Preserve only the core planner's horizontal pre-positioning; suppress jump
+  // and hit so a stale held input cannot fire on the first live frame. This
+  // keeps the useful serve setup behavior of the old planner without letting
+  // frozen snapshots corrupt touch inference or create an early jump/dive.
+  if (c.roundFrozen) {
+    let frozenPlan;
+    try {
+      frozenPlan = planCore(c, 0, 0);
+    } catch (_) {
+      frozenPlan = { type: 'FROZEN', x: 0, y: 0, hit: 0 };
+    }
+    const frozenBase = executeSafely(c, frozenPlan, 0);
+    const frozenAction = { x: frozenBase.x, y: 0, hit: 0 };
+    MEM.lastAction = cloneAction(frozenAction);
+    MEM.prev = c;
+    return uncanonicalize(frozenAction, c.flip);
+  }
+
   const prevSelf = MEM.prev ? MEM.prev.self : null;
   const prevOpp = MEM.prev ? MEM.prev.opp : null;
-  const selfVy = estimatePlayerVy(c.self, prevSelf);
-  const oppVy = estimatePlayerVy(c.opp, prevOpp);
+  const selfVy = estimatePlayerVy(c.self, prevSelf, c.tickGroup);
+  const oppVy = estimatePlayerVy(c.opp, prevOpp, c.tickGroup);
 
   let planned;
   try {
     planned = planCore(c, selfVy, oppVy);
 
-    const extras = SKILL.extraActions(c) || [];
+    const extras = SKILL.extraActions(c, {
+      C, CFG, selfVy, oppVy, cloneBall, stepBallWorld, ordinaryCollisionFrom,
+      simulateTrajectory, trajectoryLanding, evaluateOutgoingTrajectory,
+      evaluateBodyContact, canPlayerReachBallAt, predictOpponentThreats,
+      predictedSelfXAfterLatency, moveToward, action, cloneAction,
+    }) || [];
     if (extras.length) {
       let best = null;
       for (let i = 0; i < extras.length; i++) {
         const e = extras[i];
+        if (!e || typeof e !== 'object') continue;
         const v = (typeof e.score === 'number' ? e.score : 0) + SKILL.evaluate(c, e);
         if (!best || v > best.v) best = { v, e };
       }
-      if (best && best.v > 0) planned = best.e;
+      const coreValue = planned && typeof planned.value === 'number'
+        ? planned.value
+        : planned && typeof planned.score === 'number' ? planned.score : 0;
+      // Skill candidates compete with the ordinary plan instead of replacing
+      // every positive-value core action. A rare mandatory escape/activation
+      // can set force:true deliberately after the released rules are known.
+      if (best && (best.e.force === true || best.v > coreValue)) planned = best.e;
     }
   } catch (err) {
-    if (CFG.DEBUG) console.warn('[PikaPlanner_v2] fallback', String(err));
+    if (CFG.DEBUG) console.warn('[PikaPlanner_v4] fallback', String(err));
     const target = c.ball.landingX < C.NET_X
       ? clamp(c.ball.landingX - 20, C.LEFT_MIN, C.LEFT_MAX)
       : C.HOME_X;
@@ -1527,7 +1638,14 @@ function decide(snapshot) {
     }
   }
 
-  const canon = executeSafely(c, planned, selfVy);
+  const canonBase = executeSafely(c, planned, selfVy);
+  const decorated = SKILL.decorateAction(c, planned, Object.assign({}, canonBase));
+  // Skill-specific return fields may be added, but ordinary movement/hit safety
+  // remains owned by executeSafely unless the released API explicitly forces a
+  // different contract and this line is deliberately changed on match day.
+  const canon = decorated && typeof decorated === 'object'
+    ? Object.assign({}, decorated, { x: canonBase.x, y: canonBase.y, hit: canonBase.hit })
+    : canonBase;
   debugLog(c, planned, canon);
   if (CFG.DEBUG_EXPORT && typeof globalThis !== 'undefined') {
     globalThis.__PIKA_DEBUG_STATE__ = {
