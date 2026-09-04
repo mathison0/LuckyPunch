@@ -281,6 +281,7 @@ class TacticalController {
     // 새 입력이 실제로 시작될 때의 위치를 보정한다.
     this.lastAction = { x: 0, y: 0, hit: 0 };
     this.lastScoreKey = null;
+    this.lastBall = null;
   }
 
   /** 모든 경로에서 엔진 허용 입력 범위만 반환하도록 보정한다. */
@@ -316,8 +317,23 @@ class TacticalController {
     const scoreKey = view.score.self + ':' + view.score.opp;
     if (this.lastScoreKey !== null && this.lastScoreKey !== scoreKey) {
       this.lastAction = { x: 0, y: 0, hit: 0 };
+      this.lastBall = null;
     }
     this.lastScoreKey = scoreKey;
+  }
+
+  /** 공이 움직이지 않는 랠리 준비 구간에서는 점프 예약을 막는다. */
+  ballIsFrozen(view) {
+    const previous = this.lastBall;
+    this.lastBall = {
+      x: view.ball.x,
+      y: view.ball.y,
+      vx: view.ball.vx,
+      vy: view.ball.vy,
+    };
+    return previous !== null &&
+      previous.x === view.ball.x &&
+      previous.y === view.ball.y;
   }
 
   /** 목표 x를 내 플레이어가 이동 가능한 코트 범위로 제한한다. */
@@ -480,8 +496,16 @@ class TacticalController {
   /** 현재 상태에 맞춰 공격, 수비, 리시브 중 하나의 입력을 우선순위대로 선택한다. */
   plan(view) {
     this.observeRound(view);
+    const frozen = this.ballIsFrozen(view);
     // 다이빙/누움/점수 포즈는 엔진이 입력을 무시하므로 중립 입력으로 둔다.
     if (view.self.state >= 3) return this.action();
+
+    if (frozen) {
+      const target = view.landsOnOwnCourt()
+        ? this.receiveTarget(view, [])
+        : TUNE.homeX;
+      return this.action(this.moveTo(view, target), 0, 0);
+    }
 
     const power = this.powerPlan(view);
     if (power) return power;
