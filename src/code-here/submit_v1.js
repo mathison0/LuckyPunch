@@ -291,8 +291,8 @@ function uncanonicalize(a, flip) {
   out.x = flip ? -a.x : a.x;
   out.y = a.y;
   out.hit = a.hit;
-  if(out.hit === 1) {
-    out.skillX = flip ? +100 : +300;
+  if(1) {
+    out.skillX = flip ? +130 : +300;
     return out;
   }
   else {
