@@ -23,6 +23,7 @@ var PLAYER_HALF_LENGTH = 32; // 플레이어 히트박스 반폭·반높이
 var NET_PILLAR_HALF_WIDTH = 25; // 네트 기둥은 x = 216 ± 25
 var NET_PILLAR_TOP_TOP_Y = 176; // 네트 기둥 상단 y
 
+
 // ── 튜닝 파라미터 ────────────────────────────────────────────
 var RECEIVE_OFFSET = 12; // 낙하지점에서 네트 반대쪽으로 물러설 픽셀
 var WALK_DEADBAND = 6; // 이 안쪽이면 안 움직임 (1 tick 지연 진동 억제)
