@@ -254,13 +254,78 @@ function canonicalize(s) {
   });
 }
 
+//////// 여기 수정함 여기 수정함 여기 수정함 여기 수정함
+
+/* 스킬 마무리 — 결정된 (x, y, hit)에 회피 오버라이드와 skillX를 얹는다.
+   회피가 필요하면 x를 좌우 도피 방향으로 덮어쓴다 (스매시 조준 등이
+   깨지지만, 기절 1.8초를 맞는 것보다 낫다).
+   발동 가능하면 상대의 8틱(≈24프레임) 뒤 예측 위치를 노려서 쏜다. */
+function finalize(x, y, hit, s) {
+  var c = s.opp.claw;
+  if (c && c.framesUntilStrike >= DODGE_MIN_FRAMES) {
+    var offset = s.self.x - c.centerX;
+    if (Math.abs(offset) <= CLAW_DANGER) {
+      if (offset === 0) x = s.side === 'LEFT' ? -1 : 1;
+      else x = offset > 0 ? 1 : -1;
+    }
+  }
+
+  var skillX = null;
+  if (s.self.gauge >= CLAW_COST && s.self.claw === null && s.self.state < 4) {
+    var vx = s.opp.x - prevOppX;                 /* 틱당 이동량 */
+    var target = s.opp.x + vx * 8;               /* 예고 25프레임 ≈ 8틱 */
+    if (target < 0) target = 0;
+    if (target > GW) target = GW;
+    skillX = target;
+  }
+
+  prevOppX = s.opp.x;
+
+  return skillX !== null
+    ? { x: x, y: y, hit: hit, skillX: skillX }
+    : { x: x, y: y, hit: hit };
+}
+
 function uncanonicalize(a, flip) {
   const out = Object.assign({}, a);
   out.x = flip ? -a.x : a.x;
   out.y = a.y;
   out.hit = a.hit;
-  return out;
+  if(out.hit === 1) {
+    out.skillX = flip ? +100 : +300;
+    return out;
+  }
+  else {
+    return out;
+  }
+  // if (s.self.gauge >= CLAW_COST && s.self.claw === null && s.self.state < 4) {
+    
+    
+  //   if (out.hit === true) {
+  //     var vx = s.opp.x - prevOppX;                 /* 틱당 이동량 */
+  //     var target = s.opp.x + vx * 8;               /* 예고 25프레임 ≈ 8틱 */
+  //     if (target < 0) target = 0;
+  //     if (target > GW) target = GW;
+  //     out.skillX = target;
+  //     return out;
+  //   }
+  //   else {
+  //     return out; //finalize(out.x, out.y, out.hit, flip);
+  //   }
+  // }
+  // else {
+  //   return out; //finalize(out.x, out.y, out.hit, flip);
+  // }
 }
+
+
+// function uncanonicalize(a, flip) {
+//   const out = Object.assign({}, a);
+//   out.x = flip ? -a.x : a.x;
+//   out.y = a.y;
+//   out.hit = a.hit;
+//   return out;
+// }
 
 // Between points the real game keeps calling decide() while physics is frozen.
 // The round-reset state is distinctive: both players are at spawn and the ball
