@@ -2,7 +2,7 @@
  * Build-time index of bot source files under src/code-here/. Replaces the
  * old textarea-paste flow: participants (or the operator staging their
  * submissions) drop files into src/code-here/ and the panel's dropdown is
- * populated from this list at page load. See ADR-0020.
+ * populated from this list at page load. See ADR-0028.
  *
  * Filename convention (also documented in src/code-here/README.md):
  *

@@ -14,6 +14,7 @@ import { PikaUserInput } from '../physics.js';
 import {
   buildGameStateSnapshot,
   isValidBotAction,
+  readBotSkillX,
   isValidBotLanguage,
   BOT_LANGUAGE,
   NEUTRAL_ACTION,
@@ -34,6 +35,10 @@ export class PikaBotInput extends PikaUserInput {
    * @param {'js'|'py'} [args.language] bot source language (D-012, D-013).
    *   Selects which Worker script runs the source. Defaults to 'js' when
    *   omitted so pre-Phase-5 callers keep working unchanged.
+   * @param {function(): ?{gauges: number[], claws: Array, config: Object}} [args.getSkillState]
+   *   reads the skill layer's live state for the snapshot's gauge/claw fields
+   *   (D-023, skill/setup.js). Omitted means "no skill layer wired": those
+   *   fields go out as null and the bot still runs.
    * @param {function({phase: string, ok: (boolean|undefined), error: (string|undefined)}): void} [args.onInitResult]
    *   called when the Worker reports init progress. JS runner emits one
    *   terminal event (`phase: 'ok'` with `ok: true|false`); Python runner
@@ -41,12 +46,21 @@ export class PikaBotInput extends PikaUserInput {
    *   -> `'runningSource'` -> `'ok'` or `'error'`) so UI can surface
    *   Pyodide load progress (D-015, D-017).
    */
-  constructor({ side, physics, getMeta, botSource, language, onInitResult }) {
+  constructor({
+    side,
+    physics,
+    getMeta,
+    botSource,
+    language,
+    onInitResult,
+    getSkillState,
+  }) {
     super();
 
     this.side = side;
     this.physics = physics;
     this.getMeta = getMeta;
+    this.getSkillState = getSkillState || (() => null);
     this.botSource = botSource;
     this.language = isValidBotLanguage(language) ? language : BOT_LANGUAGE.JS;
     this.onInitResult = onInitResult || null;
@@ -60,6 +74,19 @@ export class PikaBotInput extends PikaUserInput {
 
     /** @type {{x: number, y: number, hit: number}} last action resolved from the bot's Worker */
     this.latestAction = Object.assign({}, NEUTRAL_ACTION);
+
+    /**
+     * Skill cast requested by the most recent bot response, waiting to be
+     * picked up by the skill layer (CONTRACTS.md 1.1 `skillX`).
+     *
+     * Kept apart from latestAction because it has different lifetime: the
+     * movement fields are re-applied on every frame of the tick group, while a
+     * cast must fire at most once per bot response -- otherwise a bot that
+     * keeps returning the same skillX would pay the gauge again every frame.
+     * skill/setup.js drains this with consumeSkillX().
+     * @type {number|null}
+     */
+    this.pendingSkillX = null;
 
     /** @type {number|null} requestId currently awaiting a Worker response, if any */
     this.pendingRequestId = null;
@@ -172,6 +199,13 @@ export class PikaBotInput extends PikaUserInput {
 
     if (message.action !== null && isValidBotAction(message.action)) {
       this.latestAction = message.action;
+      // null here means "this response asked for no cast", which correctly
+      // leaves an earlier un-drained request alone only because a drained
+      // request is already null. See consumeSkillX.
+      const skillX = readBotSkillX(message.action);
+      if (skillX !== null) {
+        this.pendingSkillX = skillX;
+      }
       this.consecutiveTimeouts = 0;
     } else {
       // Malformed action or a thrown error inside decide() -> neutral (D-002).
@@ -254,6 +288,17 @@ export class PikaBotInput extends PikaUserInput {
    * kicks off the request for the *next* tick's action. See
    * docs/agent-dev/CONTRACTS.md D-009 for the full reasoning.
    */
+  /**
+   * Take the skill cast requested by the latest bot response, if any, and
+   * clear it so the same response cannot cast twice (CONTRACTS.md 1.1).
+   * @return {number|null} x to centre the claw on, already clamped to the court
+   */
+  consumeSkillX() {
+    const skillX = this.pendingSkillX;
+    this.pendingSkillX = null;
+    return skillX;
+  }
+
   getInput() {
     this.xDirection = this.latestAction.x;
     this.yDirection = this.latestAction.y;
@@ -293,6 +338,7 @@ export class PikaBotInput extends PikaUserInput {
       physics: this.physics,
       meta: meta,
       rallyFrameCount: this.rallyFrameCount,
+      skill: this.getSkillState(),
     });
 
     const requestId = this.nextRequestId++;

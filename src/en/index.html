@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>리온이 배구</title>
     <meta name="description" content="리온이 배구 — 피카츄 배구 기반 AI 대회 버전" />
-    <meta name="author" content="Kyutae Lee" />
+    <meta name="author" content="이규태" />
 
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -38,14 +38,14 @@
               id="game-dropdown-btn"
               class="btn dropdown-btn"
             >
-              Game
+              게임
             </button>
             <div id="game-dropdown" class="dropdown">
               <button type="button" id="pause-btn" class="btn">
-                <span class="check">&check; </span>Pause
+                <span class="check">&check; </span>일시정지
               </button>
               <button type="button" id="restart-btn" class="btn">
-                Restart
+                다시시작
               </button>
             </div>
           </div>
@@ -55,7 +55,7 @@
               id="options-dropdown-btn"
               class="btn dropdown-btn"
             >
-              Options
+              설정
             </button>
             <div id="options-dropdown" class="dropdown">
               <div class="relative-container">
@@ -64,7 +64,7 @@
                   id="graphic-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Graphic &#9654;&#xfe0e;
+                  그래픽 &#9654;&#xfe0e;
                 </button>
                 <div id="graphic-submenu" class="submenu">
                   <button
@@ -72,10 +72,10 @@
                     id="graphic-sharp-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>sharp
+                    <span class="check">&check; </span>예리하게
                   </button>
                   <button type="button" id="graphic-soft-btn" class="btn">
-                    <span class="check">&check; </span>soft
+                    <span class="check">&check; </span>부드럽게
                   </button>
                 </div>
               </div>
@@ -85,14 +85,14 @@
                   id="bgm-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  BGM &#9654;&#xfe0e;
+                  배경음악 &#9654;&#xfe0e;
                 </button>
                 <div id="bgm-submenu" class="submenu">
                   <button type="button" id="bgm-on-btn" class="btn selected">
-                    <span class="check">&check; </span>on
+                    <span class="check">&check; </span>켜기
                   </button>
                   <button type="button" id="bgm-off-btn" class="btn">
-                    <span class="check">&check; </span>off
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
@@ -102,17 +102,17 @@
                   id="sfx-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  SFX &#9654;&#xfe0e;
+                  효과음 &#9654;&#xfe0e;
                 </button>
                 <div id="sfx-submenu" class="submenu">
                   <button type="button" id="stereo-btn" class="btn selected">
-                    <span class="check">&check; </span>stereo
+                    <span class="check">&check; </span>스테레오
                   </button>
                   <button type="button" id="mono-btn" class="btn">
-                    <span class="check">&check; </span>mono
+                    <span class="check">&check; </span>모노
                   </button>
                   <button type="button" id="sfx-off-btn" class="btn">
-                    <span class="check">&check; </span>off
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
@@ -122,21 +122,21 @@
                   id="speed-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Speed &#9654;&#xfe0e;
+                  속도 &#9654;&#xfe0e;
                 </button>
                 <div id="speed-submenu" class="submenu">
                   <button type="button" id="slow-speed-btn" class="btn">
-                    <span class="check">&check; </span>slow
+                    <span class="check">&check; </span>느리게
                   </button>
                   <button
                     type="button"
                     id="medium-speed-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>medium
+                    <span class="check">&check; </span>보통
                   </button>
                   <button type="button" id="fast-speed-btn" class="btn">
-                    <span class="check">&check; </span>fast
+                    <span class="check">&check; </span>빠르게
                   </button>
                 </div>
               </div>
@@ -146,21 +146,21 @@
                   id="winning-score-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Winning score &#9654;&#xfe0e;
+                  승리점수 &#9654;&#xfe0e;
                 </button>
                 <div id="winning-score-submenu" class="submenu">
                   <button type="button" id="winning-score-5-btn" class="btn">
-                    <span class="check">&check; </span>5 pts
+                    <span class="check">&check; </span>5점
                   </button>
                   <button
                     type="button"
                     id="winning-score-10-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>10 pts
+                    <span class="check">&check; </span>10점
                   </button>
                   <button type="button" id="winning-score-15-btn" class="btn">
-                    <span class="check">&check; </span>15 pts
+                    <span class="check">&check; </span>15점
                   </button>
                 </div>
               </div>
@@ -170,7 +170,7 @@
                   id="serve-rule-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Serve &#9654;&#xfe0e;
+                  서브권 &#9654;&#xfe0e;
                 </button>
                 <div id="serve-rule-submenu" class="submenu">
                   <button
@@ -178,13 +178,13 @@
                     id="serve-rule-random-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>Random serve
+                    <span class="check">&check; </span>랜덤 서브
                   </button>
                   <button type="button" id="serve-rule-winner-btn" class="btn">
-                    <span class="check">&check; </span>Winner serves
+                    <span class="check">&check; </span>승자 서브
                   </button>
                   <button type="button" id="serve-rule-loser-btn" class="btn">
-                    <span class="check">&check; </span>Loser serves
+                    <span class="check">&check; </span>패자 서브
                   </button>
                 </div>
               </div>
@@ -194,31 +194,31 @@
                   id="practice-mode-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Practice mode &#9654;&#xfe0e;
+                  연습모드 &#9654;&#xfe0e;
                 </button>
                 <div id="practice-mode-submenu" class="submenu">
                   <button type="button" id="practice-mode-on-btn" class="btn">
-                    <span class="check">&check; </span>on
+                    <span class="check">&check; </span>켜기
                   </button>
                   <button
                     type="button"
                     id="practice-mode-off-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>off
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
               <button type="button" id="reset-to-default-btn" class="btn">
-                Reset to default
+                설정 초기화
               </button>
             </div>
           </div>
           <button type="button" id="bot-setup-btn" class="btn" disabled>
-            Bot Setup
+            봇 설정
           </button>
           <button type="button" id="operator-btn" class="btn" disabled>
-            Operator
+            운영자
           </button>
           <div class="color-scheme-toggle-switch-container">
             <input
@@ -231,28 +231,26 @@
         </div>
         <div class="btn-container right">
           <button type="button" id="about-btn" class="btn glow">
-            <span class="text-about hidden">About</span
-            ><span class="text-play">Play</span>
+            <span class="text-about hidden">게임 소개</span
+            ><span class="text-play">게임 시작</span>
           </button>
         </div>
       </div>
       <div class="if-embedded-in-other-website hidden">
         <div class="limit-width">
-          It seems that you are playing this web version of
-          <span class="no-wrap">Pikachu Volleyball</span>
-          in some foreign website. If you visit the following link directly, you
-          can play the game in a pleasant environment without ads.
+          타 사이트 상에서 피카츄 배구 웹 버전을 실행하고 있는 것 같습니다. 다음
+          주소로 직접 방문하면 광고 없는 쾌적한 환경에서 플레이할 수 있습니다.
           <div class="original-address">
-            The original address of this web version of Pikachu Volleyball:<br />
+            피카츄 배구 웹 버전 원 주소:<br />
             <a
-              href="https://gorisanson.github.io/pikachu-volleyball/en/"
+              href="https://gorisanson.github.io/pikachu-volleyball/ko/"
               target="_blank"
               rel="noopener"
-              >https://gorisanson.github.io/pikachu-volleyball/en/</a
+              >https://gorisanson.github.io/pikachu-volleyball/ko/</a
             >
           </div>
           <button type="button" class="btn-in-box">
-            <span>close</span>
+            <span>닫기</span>
           </button>
         </div>
       </div>
@@ -261,7 +259,7 @@
         <div id="team-label-right" class="team-label team-label-right"></div>
         <div class="fade-in-box about" id="about-box">
           <div id="about-box-head">
-            <h1>리온이 배구</h1>
+            <h1>리온이 배구 (스킬 추가 버전)</h1>
             <p>
               피카츄 배구 웹 버전을 기반으로, 참가자가 봇 코드를 작성해 붙일 수
               있도록 개조한<br />
@@ -358,38 +356,39 @@
                 id="close-about-btn"
                 class="btn-in-box glow"
               >
-                <span class="text-close hidden">close</span
-                ><span class="text-play">Play</span>
+                <span class="text-close hidden">닫기</span
+                ><span class="text-play">게임 시작</span>
               </button>
             </div>
             <div class="for-margin"></div>
           </div>
         </div>
         <div class="fade-in-box bot-setup hidden" id="bot-setup-box">
-          <h1>Bot Test Setup</h1>
+          <h1>봇 테스트 설정</h1>
           <p class="small">
-            Left / right side each independently: keyboard, bot code,
-            or the built-in AI. Bot code files are picked up automatically
-            from <code>src/code-here/</code> if their name follows
-            <code>&lt;team&gt;_v&lt;version&gt;.js|py</code>. Settings apply
-            after you click Apply, which restarts the game.
+            왼쪽/오른쪽 진영을 각각 독립적으로 키보드, 봇 코드,
+            기본 탑재 AI 중 하나로 정할 수 있습니다. 봇 코드는
+            <code>src/code-here/</code> 폴더에 파일명
+            <code>&lt;팀명&gt;_v&lt;버전&gt;.js|py</code> 규약으로 미리
+            넣어두면 아래 드롭다운에 자동으로 나타납니다. 설정은
+            "적용"을 눌러야 반영되며, 이때 게임이 재시작됩니다.
           </p>
           <div class="bot-setup-columns">
             <div class="bot-setup-side">
-              <p class="thick">Left side (Player 1)</p>
+              <p class="thick">왼쪽 진영 (Player 1)</p>
               <div class="bot-setup-mode-group" id="bot-setup-left-mode">
                 <button type="button" class="btn selected" data-mode="keyboard">
-                  <span class="check">&check; </span>Keyboard
+                  <span class="check">&check; </span>키보드
                 </button>
                 <button type="button" class="btn" data-mode="bot">
-                  <span class="check">&check; </span>Bot code
+                  <span class="check">&check; </span>봇 코드
                 </button>
                 <button type="button" class="btn" data-mode="ai">
-                  <span class="check">&check; </span>Built-in AI
+                  <span class="check">&check; </span>기본 AI
                 </button>
               </div>
               <label class="bot-setup-select-label" for="bot-setup-left-bot">
-                Bot (used when Bot code mode is selected):
+                봇 선택 (봇 코드 모드일 때 적용):
               </label>
               <select
                 id="bot-setup-left-bot"
@@ -398,20 +397,20 @@
               <p id="bot-setup-left-status" class="bot-setup-status"></p>
             </div>
             <div class="bot-setup-side">
-              <p class="thick">Right side (Player 2)</p>
+              <p class="thick">오른쪽 진영 (Player 2)</p>
               <div class="bot-setup-mode-group" id="bot-setup-right-mode">
                 <button type="button" class="btn selected" data-mode="keyboard">
-                  <span class="check">&check; </span>Keyboard
+                  <span class="check">&check; </span>키보드
                 </button>
                 <button type="button" class="btn" data-mode="bot">
-                  <span class="check">&check; </span>Bot code
+                  <span class="check">&check; </span>봇 코드
                 </button>
                 <button type="button" class="btn" data-mode="ai">
-                  <span class="check">&check; </span>Built-in AI
+                  <span class="check">&check; </span>기본 AI
                 </button>
               </div>
               <label class="bot-setup-select-label" for="bot-setup-right-bot">
-                Bot (used when Bot code mode is selected):
+                봇 선택 (봇 코드 모드일 때 적용):
               </label>
               <select
                 id="bot-setup-right-bot"
@@ -422,26 +421,26 @@
           </div>
           <div class="bot-setup-actions">
             <button type="button" id="bot-setup-apply-btn" class="btn-in-box glow">
-              Apply (restart)
+              적용 (재시작)
             </button>
             <button type="button" id="bot-setup-close-btn" class="btn-in-box">
-              Close
+              닫기
             </button>
           </div>
         </div>
         <div class="fade-in-box operator hidden" id="operator-box">
-          <h1>Operator Console</h1>
+          <h1>운영자 콘솔</h1>
           <p class="small">
-            For foul calls, restoring the score of an interrupted match, and
-            forcing a stalled rally onward. The score buttons only change the
-            score and leave the rally running, so rebuild the score first and
-            then press "Next rally" if you need to -- either picking which side
-            serves the restart or drawing it at random per the serve rule.
+            반칙 판정, 중단된 경기의 점수 복구, 멈춘 랠리 강제 진행에
+            사용합니다. 점수 버튼은 점수만 바꾸고 진행 중인 랠리는 건드리지
+            않으므로, 점수를 여러 번 눌러 복구한 뒤 필요하면 "다음 랠리"를
+            누르세요. 다음 랠리를 누를 때는 어느 쪽 서브로 재개할지 직접
+            지목하거나, 서브 규칙대로 랜덤으로 뽑을 수 있습니다.
           </p>
           <p class="operator-score" id="operator-status">0 : 0</p>
           <div class="operator-columns">
             <div class="operator-side">
-              <p class="thick">Left (Player 1)</p>
+              <p class="thick">왼쪽 (Player 1)</p>
               <div class="operator-score-group">
                 <button type="button" id="operator-left-plus-btn" class="btn">
                   +1
@@ -452,7 +451,7 @@
               </div>
             </div>
             <div class="operator-side">
-              <p class="thick">Right (Player 2)</p>
+              <p class="thick">오른쪽 (Player 2)</p>
               <div class="operator-score-group">
                 <button type="button" id="operator-right-plus-btn" class="btn">
                   +1
@@ -469,63 +468,62 @@
               id="operator-next-round-left-btn"
               class="btn-in-box"
             >
-              Next rally (left serve)
+              다음 랠리 (왼쪽 서브)
             </button>
             <button
               type="button"
               id="operator-next-round-right-btn"
               class="btn-in-box"
             >
-              Next rally (right serve)
+              다음 랠리 (오른쪽 서브)
             </button>
             <button
               type="button"
               id="operator-next-round-random-btn"
               class="btn-in-box"
             >
-              Next rally (random serve)
+              다음 랠리 (랜덤 서브)
             </button>
             <button type="button" id="operator-reset-btn" class="btn-in-box">
-              Reset score
+              점수 초기화
             </button>
             <button type="button" id="operator-close-btn" class="btn-in-box">
-              Close
+              닫기
             </button>
           </div>
         </div>
         <div class="fade-in-box hidden" id="bot-loading-box">
-          <h1>Setting up bot environment</h1>
-          <p id="bot-loading-text">Loading bot code...</p>
+          <h1>봇 환경 세팅 중</h1>
+          <p id="bot-loading-text">봇 코드 로딩 중...</p>
           <p class="small">
-            First-time Python loads may take a few seconds. Please wait
-            here -- the game will start once the runtime is ready.
+            Python은 처음 로드할 때 몇 초 걸릴 수 있습니다. 준비가
+            끝나면 자동으로 게임이 시작됩니다.
           </p>
         </div>
         <div class="fade-in-box notice hidden" id="notice-box-1">
           <p>
-            The winning score can not be set to the
-            <span id="winning-score-in-notice-box-1"></span> pts, since the
-            score is already reached.
+            승리점수를
+            <span id="winning-score-in-notice-box-1"></span>점으로 바꿀 수
+            없습니다. 이미 이 점수가 됐거나 넘어버렸습니다.
           </p>
           <button type="button" id="notice-ok-btn-1" class="btn-in-box">
-            OK
+            알겠어요
           </button>
         </div>
         <div class="fade-in-box notice hidden" id="notice-box-2">
           <p>
-            There's no point adjusting the winning score in practice mode.<br />
-            You can turn off practice mode at
-            <span class="no_wrap"
-              >"Options &rarr; Practice mode &rarr; off"</span
-            >.
+            연습모드에서 승리점수를 바꾸는 건 의미가 없습니다.<br />
+            연습모드를 끄려면
+            <span class="no_wrap">"설정 &rarr; 연습모드 &rarr; 끄기"</span>를
+            눌러주세요.
           </p>
           <button type="button" id="notice-ok-btn-2" class="btn-in-box">
-            OK
+            알겠어요
           </button>
         </div>
         <div class="fade-in-box loading hidden" id="loading-box">
           <div>
-            <p>Loading the game assets...</p>
+            <p>게임 스프라이트/사운드 로드 중...</p>
             <div id="progress-bar-border">
               <div id="progress-bar" style="width: 0%"></div>
             </div>
@@ -535,13 +533,13 @@
           class="fade-in-box update hidden"
           id="update-notification-message-box"
         >
-          A new version is available. Update now?
+          새 버전이 나왔습니다. 지금 업데이트할까요?
           <div>
             <button type="button" class="update" id="update-now">
-              Update Now (current game state will be lost)
+              지금 업데이트 (게임 상태가 초기화됩니다)
             </button>
             <button type="button" class="update" id="later">
-              Later (automatically at relaunching the browser)
+              나중에 (브라우저 다시 켤 때 자동 업데이트)
             </button>
           </div>
         </div>

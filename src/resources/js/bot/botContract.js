@@ -19,7 +19,7 @@ export const BALL_RADIUS = 20;
  * The x range the *center* of the ball can actually occupy: it bounces off the
  * left wall at x < 0 and off the right wall at x > GROUND_WIDTH. Both walls
  * bounce when the ball's *center* reaches the screen edge, so the ball goes
- * half off-screen on both sides (D-031, which supersedes D-021).
+ * half off-screen on both sides (D-031, which supersedes D-032).
  *
  * Exposed as its own constant because bots that re-simulate the ball trajectory
  * kept open-coding the bounce test as `futureX < BALL_RADIUS || futureX >
@@ -111,8 +111,52 @@ export function isValidBotAction(action) {
 }
 
 /**
+ * Read the optional skill field of an action (decision D-022, CONTRACTS.md
+ * §1.1). Returns the x to centre the claw on, or null for "no cast".
+ *
+ * A malformed skillX only cancels the cast -- the movement fields around it
+ * still apply -- because it is an extra field bolted onto the original
+ * three, not part of them. Out-of-court values are clamped rather than
+ * rejected so a bot's aim can never be silently dropped for being one pixel
+ * off the wall.
+ *
+ * @param {*} action
+ * @return {number|null} clamped x in [0, GROUND_WIDTH], or null
+ */
+export function readBotSkillX(action) {
+  if (!action) {
+    return null;
+  }
+  const skillX = action.skillX;
+  if (typeof skillX !== 'number' || !Number.isFinite(skillX)) {
+    return null;
+  }
+  return Math.max(0, Math.min(GROUND_WIDTH, skillX));
+}
+
+/**
+ * One player's pending/active claw as bots see it (CONTRACTS.md §1.2.1).
+ * Note it is indexed by *caster*: opp.claw is the one aimed at you.
+ *
+ * @param {?{centerX: number, framesUntilStrike: number, framesLeftActive: number}} claw
+ * @return {?{centerX: number, framesUntilStrike: number, framesLeftActive: number}}
+ */
+function toClawView(claw) {
+  if (!claw) {
+    return null;
+  }
+  // Copied field by field rather than passed through, so a bot's Worker can
+  // never be handed a live reference into the skill layer's own state.
+  return {
+    centerX: claw.centerX,
+    framesUntilStrike: claw.framesUntilStrike,
+    framesLeftActive: claw.framesLeftActive,
+  };
+}
+
+/**
  * Build the per-tick game state snapshot handed to a bot (engine -> bot).
- * Pure function: only reads from the given physics/meta objects, never
+ * Pure function: only reads from the given physics/meta/skill objects, never
  * mutates them. See docs/agent-dev/CONTRACTS.md §1.2 for field-by-field
  * rationale.
  *
@@ -124,6 +168,11 @@ export function isValidBotAction(action) {
  * @param {import('../physics.js').PikaPhysics} args.physics
  * @param {{scores: number[], isPlayer2Serve: boolean}} args.meta
  * @param {number} args.rallyFrameCount ticks elapsed since the current rally started
+ * @param {?{gauges: number[], claws: Array, config: Object}} [args.skill] skill
+ *   layer state by player index (skill/setup.js getSkillState). Null/omitted
+ *   is the stub for a wiring that has no skill layer: the skill fields all go
+ *   out as null rather than disappearing, so the snapshot keeps one shape
+ *   (D-023 §7). main.js always passes it in the real game.
  * @return {Object} snapshot, matching CONTRACTS.md §1.2
  */
 export function buildGameStateSnapshot({
@@ -132,24 +181,33 @@ export function buildGameStateSnapshot({
   physics,
   meta,
   rallyFrameCount,
+  skill = null,
 }) {
   const isPlayer2 = side === 'RIGHT';
   const selfPlayer = isPlayer2 ? physics.player2 : physics.player1;
   const oppPlayer = isPlayer2 ? physics.player1 : physics.player2;
+  // Skill state is indexed by player, so it needs the same self/opp flip the
+  // players do -- doing it here means bots never have to branch on `side`.
+  const selfIndex = isPlayer2 ? 1 : 0;
 
-  const toPlayerView = (player) => ({
+  const toPlayerView = (player, playerIndex) => ({
     x: player.x,
     y: player.y,
     state: player.state,
     frameNumber: player.frameNumber,
     divingDirection: player.divingDirection,
+    // Only meaningful while state === 4 (lying down / stunned); movement
+    // resumes this many + 2 frames later (physics.js:507-512).
+    lyingDownDurationLeft: player.lyingDownDurationLeft,
+    gauge: skill ? skill.gauges[playerIndex] : null,
+    claw: skill ? toClawView(skill.claws[playerIndex]) : null,
   });
 
   return {
     tick,
     side,
-    self: toPlayerView(selfPlayer),
-    opp: toPlayerView(oppPlayer),
+    self: toPlayerView(selfPlayer, selfIndex),
+    opp: toPlayerView(oppPlayer, 1 - selfIndex),
     ball: {
       x: physics.ball.x,
       y: physics.ball.y,
@@ -168,6 +226,10 @@ export function buildGameStateSnapshot({
     },
     config: {
       tickFrameGroupSize: TICK_FRAME_GROUP_SIZE,
+      // Tuning stubs the bot would otherwise have to hardcode; see
+      // CONTRACTS.md §1.2.1 and skill/{gauge,claw}.js for the values.
+      gauge: skill ? skill.config.gauge : null,
+      claw: skill ? skill.config.claw : null,
     },
   };
 }

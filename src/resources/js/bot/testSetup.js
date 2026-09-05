@@ -18,7 +18,7 @@
  * destroys the input on the way out. Only a new Apply with a *different*
  * config (mode / bot id) tears the input down and rebuilds it.
  *
- * Post-ADR-0020 refactor: bot source no longer comes from a textarea. The
+ * Post-ADR-0028 refactor: bot source no longer comes from a textarea. The
  * dropdown is populated from botRegistry (build-time scan of
  * src/code-here/), and per-side state is just {mode, botId}. Language is
  * derived from the selected file's extension, not chosen separately.
@@ -85,8 +85,12 @@ const SIDE_INFO = {
 /**
  * @param {import('../pikavolley.js').PikachuVolleyball} pikaVolley
  * @param {import('@pixi/ticker').Ticker} ticker
+ * @param {function(): ?Object} [getSkillState] reads the skill layer's live
+ *   gauge/claw state for the bots' snapshots (D-023). Passed straight through
+ *   to every PikaBotInput built here; omitting it just leaves those snapshot
+ *   fields null.
  */
-export function setUpBotTestUI(pikaVolley, ticker) {
+export function setUpBotTestUI(pikaVolley, ticker, getSkillState) {
   const els = collectElements();
   if (!els) {
     // Markup not present in this locale's HTML -- nothing to wire up.
@@ -158,7 +162,7 @@ export function setUpBotTestUI(pikaVolley, ticker) {
     // branch never fires and no one clears the labels. Setting textContent
     // to the same value every tick is cheap (the browser diffs).
     if (duringMatch) {
-      updateTeamLabels(appliedConfig);
+      updateTeamLabels(appliedConfig, pikaVolley.scores);
     } else {
       clearTeamLabels();
     }
@@ -250,11 +254,15 @@ export function setUpBotTestUI(pikaVolley, ticker) {
     try {
       await Promise.all(
         sidesToBuild.map((side) =>
-          createBotInputAsync(pikaVolley, side, newConfig[side], els).then(
-            (input) => {
-              activeBotInputs[side] = input;
-            }
-          )
+          createBotInputAsync(
+            pikaVolley,
+            side,
+            newConfig[side],
+            els,
+            getSkillState
+          ).then((input) => {
+            activeBotInputs[side] = input;
+          })
         )
       );
     } finally {
@@ -264,7 +272,7 @@ export function setUpBotTestUI(pikaVolley, ticker) {
 
     appliedConfig = newConfig;
     isConfigApplied = false;
-    updateTeamLabels(newConfig);
+    updateTeamLabels(newConfig, pikaVolley.scores);
     pikaVolley.restart();
   });
 }
@@ -283,9 +291,10 @@ export function setUpBotTestUI(pikaVolley, ticker) {
  * @param {'left'|'right'} side
  * @param {SideConfig} sideConfig
  * @param {ReturnType<typeof collectElements>} els
+ * @param {function(): ?Object} [getSkillState] see setUpBotTestUI
  * @return {Promise<PikaBotInput>}
  */
-function createBotInputAsync(pikaVolley, side, sideConfig, els) {
+function createBotInputAsync(pikaVolley, side, sideConfig, els, getSkillState) {
   const bot = getBotById(sideConfig.botId);
   return new Promise((resolve) => {
     let settled = false;
@@ -316,6 +325,7 @@ function createBotInputAsync(pikaVolley, side, sideConfig, els) {
       }),
       botSource: bot.source,
       language: bot.language,
+      getSkillState: getSkillState,
       onInitResult: (event) => {
         setStatus(els, side, initPhaseToStatus(bot.language, event));
         if (event.phase === 'ok' || event.phase === 'error') {
@@ -616,12 +626,25 @@ function setStatus(els, side, text) {
 // silently skip: the labels are purely informational.
 /**
  * @param {{left: SideConfig, right: SideConfig}} config
+ * @param {number[]} scores [0] player 1, [1] player 2 -- a label sits right
+ *   next to its own score, and a score board is twice as wide once it needs
+ *   a tens digit (view.js drawScoresToScoreBoards), so the label has to step
+ *   aside for it. The `wide` class carries the wider offset.
  */
-function updateTeamLabels(config) {
+function updateTeamLabels(config, scores) {
+  // Same "labels are purely informational, never break the game over them"
+  // stance as the missing-markup check below.
+  const safeScores = scores || [0, 0];
   const leftEl = document.getElementById('team-label-left');
   const rightEl = document.getElementById('team-label-right');
-  if (leftEl) leftEl.textContent = describeSide(config.left);
-  if (rightEl) rightEl.textContent = describeSide(config.right);
+  if (leftEl) {
+    leftEl.textContent = describeSide(config.left);
+    leftEl.classList.toggle('wide', safeScores[0] >= 10);
+  }
+  if (rightEl) {
+    rightEl.textContent = describeSide(config.right);
+    rightEl.classList.toggle('wide', safeScores[1] >= 10);
+  }
 }
 
 function clearTeamLabels() {

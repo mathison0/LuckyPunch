@@ -321,15 +321,23 @@ span.check {
   min-height: 1.4em;
   font-size: 0.8em;
 }
-/* Team labels sit right under the scoreboards (which the PIXI view draws
- * at original coord y=10, height 32; so ~y=44 is just below). Coords use
- * the same 432x304 base as view.js's RATIO math, scaled through the same
- * --canvas-width/height vars so the labels track window resizing without
- * a JS resize listener. Pointer-events: none so the labels never eat
- * clicks that were meant for the canvas / a menu overlay above them. */
+/* Team labels sit beside their own scoreboard, on the side facing the net:
+ * player 1's to the right of its score, player 2's to the left of its own.
+ * They used to sit under the scoreboards at y=44, which collided with the
+ * gauge bars (skill/gaugeView.js BAR.y = 46, same 14px insets) -- the bars
+ * are drawn into the PIXI canvas and stay put, so the labels move instead.
+ *
+ * Coords use the same 432x304 base as view.js's RATIO math, scaled through
+ * the --canvas-width/height vars so the labels track window resizing
+ * without a JS resize listener. Pointer-events: none so the labels never
+ * eat clicks that were meant for the canvas / a menu overlay above them. */
 .team-label {
   position: absolute;
-  top: calc(var(--canvas-height) * 44 / 304);
+  /* Vertically centred on the score board, which view.js:413-416 puts at
+   * y=10 with 32px-tall digits. line-height 1 keeps the box exactly
+   * font-size tall, so 10 + (32 - 12) / 2 = 20 centres it exactly. */
+  top: calc(var(--canvas-height) * 20 / 304);
+  line-height: 1;
   font-family: monospace;
   font-weight: bold;
   font-size: calc(var(--canvas-height) * 12 / 304);
@@ -338,14 +346,34 @@ span.check {
   pointer-events: none;
   z-index: 5;
   white-space: nowrap;
+  /* A long team name would otherwise run past the net and collide with the
+   * other side's label. 160px is the gap from a label's inner edge to the
+   * net centre (216 - 50 = 166), minus a little breathing room. */
+  max-width: calc(var(--canvas-width) * 160 / 432);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Each label tucks in right beside its own score. A one-digit score fills
+ * only half its 64px board -- player 1's occupies x = 14..46 and player 2's
+ * x = 386..418 (view.js drawScoresToScoreBoards) -- so 50 and 432-382=50
+ * put the two labels at mirrored insets, 4px clear of the digit.
+ *
+ * `wide` is set from JS once that player reaches 10 and the board grows a
+ * tens digit, filling 14..78 / 354..418; the label steps out to 82 so the
+ * extra digit has room. */
 .team-label-left {
-  left: calc(var(--canvas-width) * 14 / 432);
+  left: calc(var(--canvas-width) * 50 / 432);
   text-align: left;
 }
+.team-label-left.wide {
+  left: calc(var(--canvas-width) * 82 / 432);
+}
 .team-label-right {
-  right: calc(var(--canvas-width) * 14 / 432);
+  right: calc(var(--canvas-width) * 50 / 432);
   text-align: right;
+}
+.team-label-right.wide {
+  right: calc(var(--canvas-width) * 82 / 432);
 }
 .bot-setup-actions {
   display: flex;

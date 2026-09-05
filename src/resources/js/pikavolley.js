@@ -327,9 +327,18 @@ export class PikachuVolleyball {
    * @type {GameState}
    */
   round() {
-    const pressedPowerHit =
-      this.keyboardArray[0].powerHit === 1 ||
-      this.keyboardArray[1].powerHit === 1;
+    // Only a real keyboard counts as "a human pressed a key". Every slot in
+    // keyboardArray is a PikaUserInput, but the non-keyboard ones are written
+    // to by code, not by a person: the built-in AI writes powerHit straight
+    // into whatever object sits in the slot (see letComputerDecideUserInput in
+    // physics.js), and a bot's PikaBotInput carries the bot's own decision.
+    // Reading every slot therefore made the checks below fire on machine
+    // input -- an AI-vs-AI match (Bot Setup "Built-in AI" on both sides, which
+    // puts a NullInput in the slot) ejected itself to the intro the first time
+    // either side smashed, because that is exactly when the AI sets powerHit.
+    const pressedPowerHit = this.keyboardArray.some(
+      (input) => input instanceof PikaKeyboard && input.powerHit === 1
+    );
 
     if (
       this.physics.player1.isComputer === true &&

@@ -9,6 +9,10 @@ export const ASSETS_PATH = {
     '../resources/assets/images/sprite_sheet_pengsoo_left.json',
   SPRITE_SHEET_PLAYER_RIGHT:
     '../resources/assets/images/sprite_sheet_pengsoo_right.json',
+  // Skill art (ADR-0021). Standalone images rather than sprite sheet frames,
+  // so they can be swapped for real art without regenerating the sheet.
+  SKILL_CLAW_WARNING: '../resources/assets/images/skill/claw_warning.png',
+  SKILL_CLAW: '../resources/assets/images/skill/claw.png',
   RATIO: 4, // physics coord vs viewr cord ratio
   TEXTURES: {},
   SOUNDS: {},

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="ko">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <title>리온이 배구</title>
     <meta name="description" content="리온이 배구 — 피카츄 배구 기반 AI 대회 버전" />
-    <meta name="author" content="Kyutae Lee" />
+    <meta name="author" content="이규태" />
 
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -38,13 +38,15 @@
               id="game-dropdown-btn"
               class="btn dropdown-btn"
             >
-              遊戲
+              게임
             </button>
             <div id="game-dropdown" class="dropdown">
               <button type="button" id="pause-btn" class="btn">
-                <span class="check">&check; </span>暫停
+                <span class="check">&check; </span>일시정지
               </button>
-              <button type="button" id="restart-btn" class="btn">重來</button>
+              <button type="button" id="restart-btn" class="btn">
+                다시시작
+              </button>
             </div>
           </div>
           <div class="relative-container">
@@ -53,7 +55,7 @@
               id="options-dropdown-btn"
               class="btn dropdown-btn"
             >
-              選項
+              설정
             </button>
             <div id="options-dropdown" class="dropdown">
               <div class="relative-container">
@@ -62,7 +64,7 @@
                   id="graphic-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  Graphic &#9654;&#xfe0e;
+                  그래픽 &#9654;&#xfe0e;
                 </button>
                 <div id="graphic-submenu" class="submenu">
                   <button
@@ -70,10 +72,10 @@
                     id="graphic-sharp-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>sharp
+                    <span class="check">&check; </span>예리하게
                   </button>
                   <button type="button" id="graphic-soft-btn" class="btn">
-                    <span class="check">&check; </span>soft
+                    <span class="check">&check; </span>부드럽게
                   </button>
                 </div>
               </div>
@@ -83,14 +85,14 @@
                   id="bgm-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  背景音樂 &#9654;&#xfe0e;
+                  배경음악 &#9654;&#xfe0e;
                 </button>
                 <div id="bgm-submenu" class="submenu">
                   <button type="button" id="bgm-on-btn" class="btn selected">
-                    <span class="check">&check; </span>開
+                    <span class="check">&check; </span>켜기
                   </button>
                   <button type="button" id="bgm-off-btn" class="btn">
-                    <span class="check">&check; </span>關
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
@@ -100,17 +102,17 @@
                   id="sfx-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  SFX &#9654;&#xfe0e;
+                  효과음 &#9654;&#xfe0e;
                 </button>
                 <div id="sfx-submenu" class="submenu">
                   <button type="button" id="stereo-btn" class="btn selected">
-                    <span class="check">&check; </span>stereo
+                    <span class="check">&check; </span>스테레오
                   </button>
                   <button type="button" id="mono-btn" class="btn">
-                    <span class="check">&check; </span>mono
+                    <span class="check">&check; </span>모노
                   </button>
                   <button type="button" id="sfx-off-btn" class="btn">
-                    <span class="check">&check; </span>關
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
@@ -120,21 +122,21 @@
                   id="speed-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  速度 &#9654;&#xfe0e;
+                  속도 &#9654;&#xfe0e;
                 </button>
                 <div id="speed-submenu" class="submenu">
                   <button type="button" id="slow-speed-btn" class="btn">
-                    <span class="check">&check; </span>慢速
+                    <span class="check">&check; </span>느리게
                   </button>
                   <button
                     type="button"
                     id="medium-speed-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>普通
+                    <span class="check">&check; </span>보통
                   </button>
                   <button type="button" id="fast-speed-btn" class="btn">
-                    <span class="check">&check; </span>快速
+                    <span class="check">&check; </span>빠르게
                   </button>
                 </div>
               </div>
@@ -144,21 +146,21 @@
                   id="winning-score-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  遊戲分數 &#9654;&#xfe0e;
+                  승리점수 &#9654;&#xfe0e;
                 </button>
                 <div id="winning-score-submenu" class="submenu">
                   <button type="button" id="winning-score-5-btn" class="btn">
-                    <span class="check">&check; </span>5分
+                    <span class="check">&check; </span>5점
                   </button>
                   <button
                     type="button"
                     id="winning-score-10-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>10分
+                    <span class="check">&check; </span>10점
                   </button>
                   <button type="button" id="winning-score-15-btn" class="btn">
-                    <span class="check">&check; </span>15分
+                    <span class="check">&check; </span>15점
                   </button>
                 </div>
               </div>
@@ -168,7 +170,7 @@
                   id="serve-rule-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  發球權 &#9654;&#xfe0e;
+                  서브권 &#9654;&#xfe0e;
                 </button>
                 <div id="serve-rule-submenu" class="submenu">
                   <button
@@ -176,13 +178,13 @@
                     id="serve-rule-random-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>隨機發球
+                    <span class="check">&check; </span>랜덤 서브
                   </button>
                   <button type="button" id="serve-rule-winner-btn" class="btn">
-                    <span class="check">&check; </span>勝方發球
+                    <span class="check">&check; </span>승자 서브
                   </button>
                   <button type="button" id="serve-rule-loser-btn" class="btn">
-                    <span class="check">&check; </span>敗方發球
+                    <span class="check">&check; </span>패자 서브
                   </button>
                 </div>
               </div>
@@ -192,31 +194,31 @@
                   id="practice-mode-submenu-btn"
                   class="btn submenu-btn"
                 >
-                  練習模式 &#9654;&#xfe0e;
+                  연습모드 &#9654;&#xfe0e;
                 </button>
                 <div id="practice-mode-submenu" class="submenu">
                   <button type="button" id="practice-mode-on-btn" class="btn">
-                    <span class="check">&check; </span>開
+                    <span class="check">&check; </span>켜기
                   </button>
                   <button
                     type="button"
                     id="practice-mode-off-btn"
                     class="btn selected"
                   >
-                    <span class="check">&check; </span>關
+                    <span class="check">&check; </span>끄기
                   </button>
                 </div>
               </div>
               <button type="button" id="reset-to-default-btn" class="btn">
-                恢復至預設值
+                설정 초기화
               </button>
             </div>
           </div>
           <button type="button" id="bot-setup-btn" class="btn" disabled>
-            機器人設定
+            봇 설정
           </button>
           <button type="button" id="operator-btn" class="btn" disabled>
-            管理員
+            운영자
           </button>
           <div class="color-scheme-toggle-switch-container">
             <input
@@ -229,28 +231,26 @@
         </div>
         <div class="btn-container right">
           <button type="button" id="about-btn" class="btn glow">
-            <span class="text-about hidden">關於</span
-            ><span class="text-play">開始</span>
+            <span class="text-about hidden">게임 소개</span
+            ><span class="text-play">게임 시작</span>
           </button>
         </div>
       </div>
       <div class="if-embedded-in-other-website hidden">
         <div class="limit-width">
-          It seems that you are playing this web version of
-          <span class="no-wrap">Pikachu Volleyball</span>
-          in some foreign website. If you visit the following link directly, you
-          can play the game in a pleasant environment without ads.
+          타 사이트 상에서 피카츄 배구 웹 버전을 실행하고 있는 것 같습니다. 다음
+          주소로 직접 방문하면 광고 없는 쾌적한 환경에서 플레이할 수 있습니다.
           <div class="original-address">
-            The original address of this web version of Pikachu Volleyball:<br />
+            피카츄 배구 웹 버전 원 주소:<br />
             <a
-              href="https://gorisanson.github.io/pikachu-volleyball/zh/"
+              href="https://gorisanson.github.io/pikachu-volleyball/ko/"
               target="_blank"
               rel="noopener"
-              >https://gorisanson.github.io/pikachu-volleyball/zh/</a
+              >https://gorisanson.github.io/pikachu-volleyball/ko/</a
             >
           </div>
           <button type="button" class="btn-in-box">
-            <span>關閉</span>
+            <span>닫기</span>
           </button>
         </div>
       </div>
@@ -259,7 +259,7 @@
         <div id="team-label-right" class="team-label team-label-right"></div>
         <div class="fade-in-box about" id="about-box">
           <div id="about-box-head">
-            <h1>리온이 배구</h1>
+            <h1>리온이 배구 (스킬 추가 버전)</h1>
             <p>
               피카츄 배구 웹 버전을 기반으로, 참가자가 봇 코드를 작성해 붙일 수
               있도록 개조한<br />
@@ -356,38 +356,39 @@
                 id="close-about-btn"
                 class="btn-in-box glow"
               >
-                <span class="text-close hidden">關閉</span
-                ><span class="text-play">開始</span>
+                <span class="text-close hidden">닫기</span
+                ><span class="text-play">게임 시작</span>
               </button>
             </div>
             <div class="for-margin"></div>
           </div>
         </div>
         <div class="fade-in-box bot-setup hidden" id="bot-setup-box">
-          <h1>機器人測試設定</h1>
+          <h1>봇 테스트 설정</h1>
           <p class="small">
-            左右兩側可以各自獨立設定為鍵盤、機器人程式碼、或內建AI。
-            機器人程式碼檔案放在 <code>src/code-here/</code> 資料夾下，
-            檔名須符合 <code>&lt;team&gt;_v&lt;version&gt;.js|py</code>
-            規約，便會自動出現在下方下拉選單。設定需按下「套用」才會
-            生效，屆時遊戲將重新開始。
+            왼쪽/오른쪽 진영을 각각 독립적으로 키보드, 봇 코드,
+            기본 탑재 AI 중 하나로 정할 수 있습니다. 봇 코드는
+            <code>src/code-here/</code> 폴더에 파일명
+            <code>&lt;팀명&gt;_v&lt;버전&gt;.js|py</code> 규약으로 미리
+            넣어두면 아래 드롭다운에 자동으로 나타납니다. 설정은
+            "적용"을 눌러야 반영되며, 이때 게임이 재시작됩니다.
           </p>
           <div class="bot-setup-columns">
             <div class="bot-setup-side">
-              <p class="thick">左側 (Player 1)</p>
+              <p class="thick">왼쪽 진영 (Player 1)</p>
               <div class="bot-setup-mode-group" id="bot-setup-left-mode">
                 <button type="button" class="btn selected" data-mode="keyboard">
-                  <span class="check">&check; </span>鍵盤
+                  <span class="check">&check; </span>키보드
                 </button>
                 <button type="button" class="btn" data-mode="bot">
-                  <span class="check">&check; </span>機器人程式碼
+                  <span class="check">&check; </span>봇 코드
                 </button>
                 <button type="button" class="btn" data-mode="ai">
-                  <span class="check">&check; </span>內建AI
+                  <span class="check">&check; </span>기본 AI
                 </button>
               </div>
               <label class="bot-setup-select-label" for="bot-setup-left-bot">
-                選擇機器人（選擇「機器人程式碼」時適用）：
+                봇 선택 (봇 코드 모드일 때 적용):
               </label>
               <select
                 id="bot-setup-left-bot"
@@ -396,20 +397,20 @@
               <p id="bot-setup-left-status" class="bot-setup-status"></p>
             </div>
             <div class="bot-setup-side">
-              <p class="thick">右側 (Player 2)</p>
+              <p class="thick">오른쪽 진영 (Player 2)</p>
               <div class="bot-setup-mode-group" id="bot-setup-right-mode">
                 <button type="button" class="btn selected" data-mode="keyboard">
-                  <span class="check">&check; </span>鍵盤
+                  <span class="check">&check; </span>키보드
                 </button>
                 <button type="button" class="btn" data-mode="bot">
-                  <span class="check">&check; </span>機器人程式碼
+                  <span class="check">&check; </span>봇 코드
                 </button>
                 <button type="button" class="btn" data-mode="ai">
-                  <span class="check">&check; </span>內建AI
+                  <span class="check">&check; </span>기본 AI
                 </button>
               </div>
               <label class="bot-setup-select-label" for="bot-setup-right-bot">
-                選擇機器人（選擇「機器人程式碼」時適用）：
+                봇 선택 (봇 코드 모드일 때 적용):
               </label>
               <select
                 id="bot-setup-right-bot"
@@ -420,24 +421,26 @@
           </div>
           <div class="bot-setup-actions">
             <button type="button" id="bot-setup-apply-btn" class="btn-in-box glow">
-              套用（重新開始）
+              적용 (재시작)
             </button>
             <button type="button" id="bot-setup-close-btn" class="btn-in-box">
-              關閉
+              닫기
             </button>
           </div>
         </div>
         <div class="fade-in-box operator hidden" id="operator-box">
-          <h1>管理員主控台</h1>
+          <h1>운영자 콘솔</h1>
           <p class="small">
-            用於犯規判定、還原中斷比賽的比分，以及強制推進卡住的回合。比分按鈕
-            只會改變比分，不會影響進行中的回合；請先還原比分，需要時再按
-            「下一回合」，可自行選擇由哪一方發球，或依發球規則隨機抽出。
+            반칙 판정, 중단된 경기의 점수 복구, 멈춘 랠리 강제 진행에
+            사용합니다. 점수 버튼은 점수만 바꾸고 진행 중인 랠리는 건드리지
+            않으므로, 점수를 여러 번 눌러 복구한 뒤 필요하면 "다음 랠리"를
+            누르세요. 다음 랠리를 누를 때는 어느 쪽 서브로 재개할지 직접
+            지목하거나, 서브 규칙대로 랜덤으로 뽑을 수 있습니다.
           </p>
           <p class="operator-score" id="operator-status">0 : 0</p>
           <div class="operator-columns">
             <div class="operator-side">
-              <p class="thick">左方 (Player 1)</p>
+              <p class="thick">왼쪽 (Player 1)</p>
               <div class="operator-score-group">
                 <button type="button" id="operator-left-plus-btn" class="btn">
                   +1
@@ -448,7 +451,7 @@
               </div>
             </div>
             <div class="operator-side">
-              <p class="thick">右方 (Player 2)</p>
+              <p class="thick">오른쪽 (Player 2)</p>
               <div class="operator-score-group">
                 <button type="button" id="operator-right-plus-btn" class="btn">
                   +1
@@ -465,61 +468,62 @@
               id="operator-next-round-left-btn"
               class="btn-in-box"
             >
-              下一回合（左方發球）
+              다음 랠리 (왼쪽 서브)
             </button>
             <button
               type="button"
               id="operator-next-round-right-btn"
               class="btn-in-box"
             >
-              下一回合（右方發球）
+              다음 랠리 (오른쪽 서브)
             </button>
             <button
               type="button"
               id="operator-next-round-random-btn"
               class="btn-in-box"
             >
-              下一回合（隨機發球）
+              다음 랠리 (랜덤 서브)
             </button>
             <button type="button" id="operator-reset-btn" class="btn-in-box">
-              重設比分
+              점수 초기화
             </button>
             <button type="button" id="operator-close-btn" class="btn-in-box">
-              關閉
+              닫기
             </button>
           </div>
         </div>
         <div class="fade-in-box hidden" id="bot-loading-box">
-          <h1>機器人環境設定中</h1>
-          <p id="bot-loading-text">載入機器人程式碼中...</p>
+          <h1>봇 환경 세팅 중</h1>
+          <p id="bot-loading-text">봇 코드 로딩 중...</p>
           <p class="small">
-            首次載入 Python 可能需要幾秒。準備就緒後遊戲會自動開始。
+            Python은 처음 로드할 때 몇 초 걸릴 수 있습니다. 준비가
+            끝나면 자동으로 게임이 시작됩니다.
           </p>
         </div>
         <div class="fade-in-box notice hidden" id="notice-box-1">
           <p>
-            遊戲分數無法設定成
-            <span id="winning-score-in-notice-box-1"></span> 分，因為
-            此分數已於先前達到
+            승리점수를
+            <span id="winning-score-in-notice-box-1"></span>점으로 바꿀 수
+            없습니다. 이미 이 점수가 됐거나 넘어버렸습니다.
           </p>
           <button type="button" id="notice-ok-btn-1" class="btn-in-box">
-            OK
+            알겠어요
           </button>
         </div>
         <div class="fade-in-box notice hidden" id="notice-box-2">
           <p>
-            在練習模式中並沒有分數設定。 <br />
-            你可以在
-            <span class="no_wrap">"選項 &rarr; 練習模式 &rarr; 關"</span>.
-            關閉練習模式
+            연습모드에서 승리점수를 바꾸는 건 의미가 없습니다.<br />
+            연습모드를 끄려면
+            <span class="no_wrap">"설정 &rarr; 연습모드 &rarr; 끄기"</span>를
+            눌러주세요.
           </p>
           <button type="button" id="notice-ok-btn-2" class="btn-in-box">
-            OK
+            알겠어요
           </button>
         </div>
         <div class="fade-in-box loading hidden" id="loading-box">
           <div>
-            <p>載入遊戲資源中...</p>
+            <p>게임 스프라이트/사운드 로드 중...</p>
             <div id="progress-bar-border">
               <div id="progress-bar" style="width: 0%"></div>
             </div>
@@ -529,13 +533,13 @@
           class="fade-in-box update hidden"
           id="update-notification-message-box"
         >
-          有新版本釋出。是否更新？
+          새 버전이 나왔습니다. 지금 업데이트할까요?
           <div>
             <button type="button" class="update" id="update-now">
-              現在更新 (將會失去當前的遊戲狀態)
+              지금 업데이트 (게임 상태가 초기화됩니다)
             </button>
             <button type="button" class="update" id="later">
-              待會再說 (於瀏覽器重開後自動更新)
+              나중에 (브라우저 다시 켤 때 자동 업데이트)
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 {
-  "name": "leonyi-volleyball",
+  "name": "leonyi-volleyball-skill",
   "version": "1.0.0",
-  "description": "리온이 배구 — 피카츄 배구 기반 2026 성균관대학교 × 한양대학교 CSE 교류전 AI 부문 대회 버전",
+  "description": "리온이 배구 (스킬 추가 버전) — 피카츄 배구 기반 2026 성균관대학교 × 한양대학교 CSE 교류전 AI 부문 대회 버전",
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

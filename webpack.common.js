@@ -2,6 +2,7 @@ const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const WorkboxPlugin = require('workbox-webpack-plugin');
 
 module.exports = {
   entry: {
@@ -30,7 +31,7 @@ module.exports = {
       // that lands in this directory, so a participant can drop in a plain
       // top-level `function decide(...)` file without ESM boilerplate. The
       // registry (src/resources/js/bot/botRegistry.js) picks these up via
-      // require.context. See ADR-0020.
+      // require.context. See ADR-0028.
       {
         test: /\.(js|py)$/,
         include: path.resolve(__dirname, 'src/code-here'),
@@ -83,11 +84,18 @@ module.exports = {
         },
       ],
     }),
+    // en/ and zh/ ship the same Korean page as ko/ -- this fork is
+    // Korean-only, and the original en/zh URLs stay reachable so that
+    // pre-existing bookmarks or deep links do not 404 (team lead's call).
+    // The 'ko' chunk is included so message sprites get their Korean paths;
+    // without it the game would render with the default (English) sprite
+    // set even though the surrounding HTML is Korean.
     new HtmlWebpackPlugin({
       template: 'src/en/index.html',
       filename: 'en/index.html',
       chunks: [
         'runtime',
+        'ko',
         'main',
         'dark_color_scheme',
         'is_embedded_in_other_website',
@@ -119,6 +127,7 @@ module.exports = {
       filename: 'zh/index.html',
       chunks: [
         'runtime',
+        'ko',
         'main',
         'dark_color_scheme',
         'is_embedded_in_other_website',
@@ -158,6 +167,11 @@ module.exports = {
         collapseWhitespace: true,
         removeComments: true,
       },
+    }),
+    new WorkboxPlugin.GenerateSW({
+      swDest: 'sw.js',
+      cleanupOutdatedCaches: true,
+      skipWaiting: false,
     }),
   ],
 };

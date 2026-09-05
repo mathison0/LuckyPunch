@@ -42,17 +42,16 @@ const PLAYER_TOUCHING_GROUND_Y_COORD = 244;
 /** @constant @type {number} ball's radius */
 const BALL_RADIUS = 20;
 /**
- * [실험] thunder 기술 대응: 공의 y축 속도(낙하/상승 속도) 상한.
- *
- * thunder는 78프레임짜리 녹화 입력이 끝난 뒤, 그 상황을 이어받은 내장 AI가
- * 즉흥적으로 두 번째 파워히트를 날리면서 완성된다. 이 마지막 히트의 낙하속도가
- * 64까지 나오는데, 이는 엔진의 파워히트 최저 속도(30, 즉 15*2)의 두 배가 넘는
- * 값이다. 헤드리스 실측 결과, 상한을 60/50/40으로 걸어도 위력만 줄 뿐 여전히
- * 상대가 못 받고 실점했고, 30(엔진의 파워히트 최저 속도와 동일)으로 걸어야만
- * 비로소 200프레임 안에 점수가 나지 않았다.
- *
- * 즉 이 상한은 thunder만 막는 게 아니라 "모든 파워히트를 최저 위력으로 획일화"
- * 하는 것과 같다. thunder만 겨냥한 정밀한 해법은 아니며, 실험용으로 남겨둔다.
+ * Ceiling on |ball.yVelocity|, added by this fork (not in the original
+ * assembly). A normal smash exits the collision block with a y-velocity of at
+ * least 30 (ballAbsYVelocity floor 15 * power-hit multiplier 2, see
+ * physics.js processCollisionBetweenBallAndPlayer), so 40 does not clip
+ * ordinary play; it caps only the runaway values produced by long rallies of
+ * gravity accumulation and by any future thunder-like skill. Applied at every
+ * frame in the real physics AND in both landing-point predictors, so the AI's
+ * expected landing point stays consistent with what the ball actually does
+ * (backport of develop's 97f6481).
+ * @constant @type {number}
  */
 const BALL_MAX_Y_VELOCITY = 40;
 /** @constant @type {number} ball's y coordinate when it is touching ground */
@@ -426,8 +425,11 @@ function processCollisionBetweenBallAndWorldAndSetBallPosition(ball) {
   ball.previousX = ball.x;
   ball.previousY = ball.y;
 
-  // [실험] Y축 속도 상한. 이 함수는 매 프레임 무조건 호출되므로, 파워히트든
-  // 중력 누적이든 원인과 무관하게 이 지점에서 항상 걸린다.
+  // Cap |yVelocity| before position math runs. Placed here (before both the
+  // rotation and the futureBallY calculation below) so it applies regardless
+  // of what pushed the value up -- gravity accumulation across long rallies
+  // or a future skill that spikes it. See the two predictors below for the
+  // matching clamps that MUST stay in lockstep with this one.
   if (ball.yVelocity > BALL_MAX_Y_VELOCITY) {
     ball.yVelocity = BALL_MAX_Y_VELOCITY;
   } else if (ball.yVelocity < -BALL_MAX_Y_VELOCITY) {
@@ -455,7 +457,7 @@ function processCollisionBetweenBallAndWorldAndSetBallPosition(ball) {
     If the center of ball would get out of left world bound or right world bound, bounce back.
 
     NOTE (this fork, 2026-08-27 -- see docs/agent-dev/decisions/ADR-0031-ball-wall-bounce-symmetry-widened.md,
-    which supersedes ADR-0021):
+    which supersedes ADR-0032):
     The original game bounces at "futureBallX < BALL_RADIUS" on the left but "futureBallX > GROUND_WIDTH"
     on the right, which makes the right court 20px wider (left 196px vs right 216px). Measured with
     default-AI vs default-AI, that skewed the left side to 65-75% of the points.
@@ -789,8 +791,10 @@ function calculateExpectedLandingPointXFor(ball) {
   while (true) {
     loopCounter++;
 
-    // [실험] 실물리와 동일한 y속도 상한 적용 (BALL_MAX_Y_VELOCITY 참조).
-    // 이게 없으면 예측기와 실제 궤적이 어긋나 AI가 착지점을 잘못 잡음.
+    // Mirror the real-physics clamp in
+    // processCollisionBetweenBallAndWorldAndSetBallPosition. Without this the
+    // simulated ball falls faster than the real one, so the AI stands too
+    // close and misses.
     if (copyBall.yVelocity > BALL_MAX_Y_VELOCITY) {
       copyBall.yVelocity = BALL_MAX_Y_VELOCITY;
     } else if (copyBall.yVelocity < -BALL_MAX_Y_VELOCITY) {
@@ -1035,8 +1039,8 @@ function expectedLandingPointXWhenPowerHit(
   while (true) {
     loopCounter++;
 
-    // [실험] 실물리와 동일한 y속도 상한 적용 (BALL_MAX_Y_VELOCITY 참조).
-    // 이게 없으면 예측기와 실제 궤적이 어긋나 AI가 착지점을 잘못 잡음.
+    // Same clamp as the other two -- must agree or the power-hit landing
+    // prediction disagrees with the physics it's predicting.
     if (copyBall.yVelocity > BALL_MAX_Y_VELOCITY) {
       copyBall.yVelocity = BALL_MAX_Y_VELOCITY;
     } else if (copyBall.yVelocity < -BALL_MAX_Y_VELOCITY) {

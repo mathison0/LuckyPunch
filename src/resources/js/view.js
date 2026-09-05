@@ -561,6 +561,17 @@ export class GameView {
       } else {
         tensAnimatedSprite.visible = false;
       }
+      // Player 1's board is anchored to the left edge of the screen and
+      // player 2's to the right, but both lay their digits out tens-then-
+      // units. Hiding the tens digit therefore leaves a single-digit score
+      // sitting 32px inward on the left side only, so the two boards stop
+      // mirroring each other. Left-align player 1 instead: with no tens
+      // digit to show, its units digit slides into the tens slot. Player 2
+      // keeps the original right-aligned layout, and at a two-digit score
+      // both boards fill their full 64px again.
+      if (i === 0) {
+        unitsAnimatedSprite.x = score >= 10 ? RATIO * 32 : 0;
+      }
     }
   }
 

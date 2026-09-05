@@ -44,6 +44,7 @@ import { PikachuVolleyball } from './pikavolley.js';
 import { ASSETS_PATH } from './assets_path.js';
 import { setUpUI } from './ui.js';
 import { setUpBotTestUI } from './bot/testSetup.js';
+import { setUpSkills } from './skill/setup.js';
 import { setUpOperatorConsole } from './operator/console.js';
 import { setUpTouchLimit } from './rules/touchLimit.js';
 
@@ -89,6 +90,8 @@ renderer.render(stage); // To make the initial canvas painting stable in the Fir
 loader.add(ASSETS_PATH.SPRITE_SHEET);
 loader.add(ASSETS_PATH.SPRITE_SHEET_PLAYER_LEFT);
 loader.add(ASSETS_PATH.SPRITE_SHEET_PLAYER_RIGHT);
+loader.add(ASSETS_PATH.SKILL_CLAW_WARNING);
+loader.add(ASSETS_PATH.SKILL_CLAW);
 for (const prop in ASSETS_PATH.SOUNDS) {
   loader.add(ASSETS_PATH.SOUNDS[prop]);
 }
@@ -149,11 +152,23 @@ function setUpInitialUI() {
 function setup() {
   const pikaVolley = new PikachuVolleyball(stage, loader.resources);
   setUpUI(pikaVolley, ticker);
-  setUpBotTestUI(pikaVolley, ticker); // Phase 2 test environment, see bot/testSetup.js
+  // Phase 4 skills (gauge + claw). Built before the bot UI because bots read
+  // gauge/claw state for every snapshot they send (D-023); its per-frame
+  // observation is registered after start() so the callback sees the frame
+  // gameLoop() just simulated rather than the previous one. See skill/setup.js.
+  const skills = setUpSkills(pikaVolley, loader.resources);
+  // Phase 2 test environment, see bot/testSetup.js
+  setUpBotTestUI(pikaVolley, ticker, skills.getSkillState);
   const operator = setUpOperatorConsole(pikaVolley, ticker); // referee overrides, see operator/console.js
   start(pikaVolley);
-  // After start() on purpose: this observer has to see the frame the game loop
-  // just simulated, and ticker callbacks run in the order they were added.
+  // Both observers below are wired after start() on purpose: ticker callbacks
+  // run in registration order, so they have to see the frame the game loop
+  // just simulated rather than the previous one.
+  //
+  // Skills observe before the touch limit: the contact that trips the limit is
+  // still made during a live rally, so it charges the gauge before
+  // awardPoint() -> forceNextRound() sets roundEnded and closes the rally.
+  skills.startObserving(ticker);
   setUpTouchLimit(pikaVolley, ticker, operator); // see rules/touchLimit.js
 }
 
